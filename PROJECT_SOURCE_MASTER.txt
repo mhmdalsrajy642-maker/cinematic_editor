@@ -1,0 +1,4886 @@
+﻿# الدليل التنفيذي الكامل لبناء تطبيق المونتاج الثوري
+## المرحلة الأولى: إنشاء المشروع وتهيئة البيئة في GitHub Codespaces
+---
+### الخطوة 1: فتح GitHub Codespaces وتهيئة البيئة
+بعد تسجيل الدخول إلى GitHub، اذهب إلى `github.com` وأنشئ مستودعاً جديداً باسم `cinematic_editor`. ثم اضغط على زر `Code` الأخضر، اختر تبويب `Codespaces`، ثم اضغط `Create codespace on main`.
+سيفتح لك محرر VS Code كامل في المتصفح. الآن افتح Terminal من القائمة العلوية `Terminal > New Terminal`.
+---
+### الخطوة 2: تثبيت Flutter في Codespaces
+اكتب هذه الأوامر في الـ Terminal واحداً تلو الآخر:
+```bash
+# تحديث النظام أولاً
+sudo apt-get update -y
+# تثبيت الأدوات الأساسية المطلوبة
+sudo apt-get install -y curl git unzip xz-utils zip libglu1-mesa wget \
+  clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev \
+  libstdc++-12-dev
+# تنزيل Flutter SDK
+cd /home/codespace
+wget https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.22.0-stable.tar.xz
+# فك الضغط
+tar xf flutter_linux_3.22.0-stable.tar.xz
+# إضافة Flutter إلى PATH بشكل دائم
+echo 'export PATH="$PATH:/home/codespace/flutter/bin"' >> ~/.bashrc
+echo 'export PATH="$PATH:/home/codespace/flutter/bin"' >> ~/.profile
+source ~/.bashrc
+# التحقق من التثبيت
+flutter --version
+```
+---
+### الخطوة 3: إنشاء مشروع Flutter
+```bash
+# الانتقال إلى مجلد العمل
+cd /workspaces/cinematic_editor
+# إنشاء مشروع Flutter جديد
+flutter create --org com.cinematiceditor --project-name cinematic_editor \
+  --platforms android,ios .
+# قبول تراخيص Android
+flutter doctor --android-licenses
+# التحقق من صحة البيئة
+flutter doctor
+```
+---
+### الخطوة 4: بناء هيكل الملفات الكامل
+الآن سننشئ هيكل المجلدات الكامل للمشروع. اكتب هذا الأمر الطويل كاملاً في الـ Terminal:
+```bash
+# إنشاء هيكل المجلدات الكامل
+mkdir -p lib/core/engine
+mkdir -p lib/core/models
+mkdir -p lib/core/services
+mkdir -p lib/core/utils
+mkdir -p lib/features/editor/presentation/screens
+mkdir -p lib/features/editor/presentation/widgets/timeline
+mkdir -p lib/features/editor/presentation/widgets/toolbar
+mkdir -p lib/features/editor/presentation/widgets/preview
+mkdir -p lib/features/editor/presentation/widgets/panels
+mkdir -p lib/features/editor/presentation/cubit
+mkdir -p lib/features/ai_commands/presentation
+mkdir -p lib/features/ai_commands/services
+mkdir -p lib/features/audio/presentation
+mkdir -p lib/features/audio/services
+mkdir -p lib/features/export/presentation
+mkdir -p lib/features/export/services
+mkdir -p lib/features/templates/presentation
+mkdir -p lib/features/templates/services
+mkdir -p lib/features/auth/presentation
+mkdir -p lib/features/auth/services
+mkdir -p lib/features/subscription/presentation
+mkdir -p lib/features/subscription/services
+mkdir -p lib/shared/theme
+mkdir -p lib/shared/widgets
+mkdir -p lib/shared/constants
+mkdir -p android/app/src/main/jni
+mkdir -p ios/Runner/cpp
+mkdir -p native/cpp/engine
+mkdir -p native/cpp/ffmpeg_bridge
+mkdir -p assets/fonts
+mkdir -p assets/icons
+mkdir -p assets/animations
+mkdir -p backend/app/api
+mkdir -p backend/app/models
+mkdir -p backend/app/services
+mkdir -p backend/app/core
+echo "✅ هيكل المجلدات تم إنشاؤه بنجاح"
+```
+---
+### الخطوة 5: تهيئة ملف pubspec.yaml
+هذا الملف هو قلب مشروع Flutter. افتح الملف الموجود في المسار `pubspec.yaml` واستبدل محتواه **كاملاً** بهذا الكود:
+**المسار:** `/workspaces/cinematic_editor/pubspec.yaml`
+```yaml
+name: cinematic_editor
+description: A revolutionary mobile video editing application
+publish_to: 'none'
+version: 1.0.0+1
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+dependencies:
+  flutter:
+    sdk: flutter
+  # إدارة الحالة
+  flutter_bloc: ^8.1.5
+  equatable: ^2.0.5
+  get_it: ^7.7.0
+  # قاعدة البيانات المحلية
+  drift: ^2.18.0
+  sqlite3_flutter_libs: ^0.5.24
+  path_provider: ^2.1.3
+  path: ^1.9.0
+  # معالجة الفيديو والصوت
+  video_player: ^2.9.1
+  just_audio: ^0.9.40
+  ffmpeg_kit_flutter_full_gpl: ^6.0.3
+  # الذكاء الاصطناعي المحلي
+  tflite_flutter: ^0.10.4
+  google_mediapipe: ^0.10.14
+  # الشبكة والـ API
+  dio: ^5.4.3
+  retrofit: ^4.1.0
+  json_annotation: ^4.9.0
+  web_socket_channel: ^2.4.0
+  # الواجهة والتصميم
+  flutter_svg: ^2.0.10+1
+  lottie: ^3.1.2
+  shimmer: ^3.0.0
+  flutter_animate: ^4.5.0
+  google_fonts: ^6.2.1
+  cached_network_image: ^3.3.1
+  # الأدوات المساعدة
+  uuid: ^4.4.0
+  intl: ^0.19.0
+  permission_handler: ^11.3.1
+  device_info_plus: ^10.1.0
+  package_info_plus: ^8.0.2
+  share_plus: ^9.0.0
+  file_picker: ^8.0.3
+  image_picker: ^1.1.2
+  # التخزين والأمان
+  flutter_secure_storage: ^9.2.2
+  hive_flutter: ^1.1.0
+  hive: ^2.2.3
+  crypto: ^3.0.3
+  # المدفوعات
+  in_app_purchase: ^3.2.0
+  revenue_cat_flutter_sdk: ^6.0.0
+  # الإشعارات والتحليلات
+  firebase_core: ^3.3.0
+  firebase_analytics: ^11.2.1
+  firebase_crashlytics: ^4.0.4
+  firebase_auth: ^5.1.4
+  cloud_firestore: ^5.2.1
+  # ربط الكود الأصلي C++
+  ffi: ^2.1.3
+  # مؤشرات التقدم والتعديلات على الصور
+  photo_view: ^0.15.0
+  syncfusion_flutter_sliders: ^26.1.38
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  build_runner: ^2.4.11
+  drift_dev: ^2.18.0
+  retrofit_generator: ^8.1.0
+  json_serializable: ^6.8.0
+  hive_generator: ^2.0.1
+  mockito: ^5.4.4
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/fonts/
+    - assets/icons/
+    - assets/animations/
+  fonts:
+    - family: CinematicSans
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf
+        - asset: assets/fonts/Inter-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Inter-Light.ttf
+          weight: 300
+```
+---
+### الخطوة 6: نظام الثيمات والألوان
+**المسار:** `lib/shared/theme/app_colors.dart`
+```dart
+// lib/shared/theme/app_colors.dart
+// هذا الملف يحدد كل ألوان التطبيق في مكان واحد مركزي
+// السبب: أي تغيير في اللون المستقبلي يكون في مكان واحد فقط
+import 'package:flutter/material.dart';
+class AppColors {
+  // منع إنشاء كائن من هذه الكلاس لأنها static فقط
+  AppColors._();
+  // ====== الألوان الأساسية لخلفية التطبيق ======
+  // نستخدم درجات الرمادي الداكن جداً لإعطاء إحساس المونتاج الاحترافي
+  static const Color backgroundPrimary = Color(0xFF0A0A0F);    // أسود مائل للبنفسجي
+  static const Color backgroundSecondary = Color(0xFF12121A);  // خلفية البطاقات
+  static const Color backgroundTertiary = Color(0xFF1A1A26);   // خلفية الحقول
+  static const Color backgroundElevated = Color(0xFF22222F);   // عناصر مرتفعة
+  // ====== ألوان مسارات التايم لاين ======
+  static const Color timelineBackground = Color(0xFF0D0D15);
+  static const Color timelineTrackVideo = Color(0xFF1E3A5F);   // أزرق داكن للفيديو
+  static const Color timelineTrackAudio = Color(0xFF1F4A2E);   // أخضر داكن للصوت
+  static const Color timelineTrackText = Color(0xFF4A2E1F);    // برتقالي داكن للنصوص
+  static const Color timelinePlayhead = Color(0xFFFF3B3B);     // أحمر لمؤشر التشغيل
+  static const Color timelineClipBorder = Color(0xFF3D3D5C);
+  // ====== الألوان التمييزية (Accent Colors) ======
+  static const Color accentPrimary = Color(0xFF6C63FF);        // بنفسجي كهربائي - اللون الرئيسي
+  static const Color accentSecondary = Color(0xFF00D4FF);      // أزرق سماوي للتوهج
+  static const Color accentAI = Color(0xFF9D4EDD);             // بنفسجي للذكاء الاصطناعي
+  static const Color accentSuccess = Color(0xFF00E676);        // أخضر للنجاح
+  static const Color accentWarning = Color(0xFFFFAB00);        // أصفر للتحذير
+  static const Color accentDanger = Color(0xFFFF3D00);         // أحمر للخطر
+  // ====== ألوان النصوص ======
+  static const Color textPrimary = Color(0xFFF5F5FF);          // أبيض مائل للبنفسجي
+  static const Color textSecondary = Color(0xFFB0B0CC);        // رمادي فاتح
+  static const Color textTertiary = Color(0xFF6B6B8A);         // رمادي متوسط
+  static const Color textDisabled = Color(0xFF3D3D5C);         // رمادي داكن
+  // ====== ألوان الأزرار ======
+  static const Color buttonPrimary = Color(0xFF6C63FF);
+  static const Color buttonSecondary = Color(0xFF22222F);
+  static const Color buttonDanger = Color(0xFFFF3D00);
+  // ====== تدرجات الألوان (Gradients) ======
+  // تدرج زر AI المتوهج في المنتصف
+  static const LinearGradient aiButtonGradient = LinearGradient(
+    colors: [Color(0xFF9D4EDD), Color(0xFF6C63FF), Color(0xFF00D4FF)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+  // تدرج خلفية شريط الأدوات السفلي
+  static const LinearGradient toolbarGradient = LinearGradient(
+    colors: [Color(0xFF0A0A0F), Color(0xFF12121A)],
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+  );
+  // تدرج الـ Preview Player
+  static const LinearGradient previewOverlayGradient = LinearGradient(
+    colors: [Colors.transparent, Color(0x990A0A0F)],
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+  );
+  // ====== ظلال الإضاءة (Glow Effects) ======
+  static List<BoxShadow> aiButtonGlow = [
+    BoxShadow(
+      color: const Color(0xFF9D4EDD).withOpacity(0.6),
+      blurRadius: 20,
+      spreadRadius: 2,
+    ),
+    BoxShadow(
+      color: const Color(0xFF6C63FF).withOpacity(0.4),
+      blurRadius: 40,
+      spreadRadius: 5,
+    ),
+  ];
+  static List<BoxShadow> accentGlow = [
+    BoxShadow(
+      color: accentPrimary.withOpacity(0.4),
+      blurRadius: 15,
+      spreadRadius: 1,
+    ),
+  ];
+}
+```
+---
+**المسار:** `lib/shared/theme/app_theme.dart`
+```dart
+// lib/shared/theme/app_theme.dart
+// يحدد هذا الملف الثيم الكامل للتطبيق بناءً على الألوان المعرفة أعلاه
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'app_colors.dart';
+class AppTheme {
+  AppTheme._();
+  static ThemeData get darkTheme {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      
+      // ====== مخطط الألوان الأساسي ======
+      colorScheme: const ColorScheme.dark(
+        primary: AppColors.accentPrimary,
+        secondary: AppColors.accentSecondary,
+        tertiary: AppColors.accentAI,
+        surface: AppColors.backgroundSecondary,
+        error: AppColors.accentDanger,
+        onPrimary: AppColors.textPrimary,
+        onSecondary: AppColors.textPrimary,
+        onSurface: AppColors.textPrimary,
+        onError: AppColors.textPrimary,
+      ),
+      // ====== الخلفية الرئيسية ======
+      scaffoldBackgroundColor: AppColors.backgroundPrimary,
+      // ====== شريط التطبيق العلوي ======
+      appBarTheme: const AppBarTheme(
+        backgroundColor: AppColors.backgroundSecondary,
+        elevation: 0,
+        centerTitle: false,
+        iconTheme: IconThemeData(color: AppColors.textPrimary),
+        titleTextStyle: TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          fontFamily: 'CinematicSans',
+        ),
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+          systemNavigationBarColor: AppColors.backgroundPrimary,
+        ),
+      ),
+      // ====== نمط النصوص ======
+      textTheme: const TextTheme(
+        displayLarge: TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 32,
+          fontWeight: FontWeight.w700,
+          fontFamily: 'CinematicSans',
+        ),
+        displayMedium: TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 28,
+          fontWeight: FontWeight.w600,
+          fontFamily: 'CinematicSans',
+        ),
+        headlineLarge: TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 24,
+          fontWeight: FontWeight.w600,
+          fontFamily: 'CinematicSans',
+        ),
+        headlineMedium: TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 20,
+          fontWeight: FontWeight.w500,
+          fontFamily: 'CinematicSans',
+        ),
+        titleLarge: TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          fontFamily: 'CinematicSans',
+        ),
+        titleMedium: TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          fontFamily: 'CinematicSans',
+        ),
+        bodyLarge: TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 16,
+          fontWeight: FontWeight.w400,
+          fontFamily: 'CinematicSans',
+        ),
+        bodyMedium: TextStyle(
+          color: AppColors.textSecondary,
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+          fontFamily: 'CinematicSans',
+        ),
+        bodySmall: TextStyle(
+          color: AppColors.textTertiary,
+          fontSize: 12,
+          fontWeight: FontWeight.w400,
+          fontFamily: 'CinematicSans',
+        ),
+        labelLarge: TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          fontFamily: 'CinematicSans',
+        ),
+      ),
+      // ====== الأزرار المرتفعة ======
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.accentPrimary,
+          foregroundColor: AppColors.textPrimary,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          textStyle: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            fontFamily: 'CinematicSans',
+          ),
+        ),
+      ),
+      // ====== الأيقونات ======
+      iconTheme: const IconThemeData(
+        color: AppColors.textSecondary,
+        size: 24,
+      ),
+      // ====== الفواصل ======
+      dividerTheme: const DividerThemeData(
+        color: AppColors.backgroundElevated,
+        thickness: 1,
+      ),
+    );
+  }
+}
+```
+---
+### الخطوة 7: النماذج الأساسية (Core Models)
+هذه النماذج هي العمود الفقري لكل بيانات التطبيق.
+**المسار:** `lib/core/models/timeline_models.dart`
+```dart
+// lib/core/models/timeline_models.dart
+// هذا الملف يحدد بنية البيانات الكاملة للتايم لاين
+// كل عملية تعديل في التطبيق تُحوَّل إلى هذه النماذج وتُحفظ كـ JSON
+import 'package:equatable/equatable.dart';
+import 'package:uuid/uuid.dart';
+// ====================================================
+// نموذج مقطع الفيديو (Video Clip)
+// يمثل أي مقطع فيديو أو صورة على التايم لاين
+// ====================================================
+class VideoClip extends Equatable {
+  final String id;                    // معرف فريد لكل مقطع
+  final String originalPath;          // مسار الملف الأصلي (4K)
+  final String proxyPath;             // مسار النسخة الخفيفة (360p)
+  final double startTime;             // وقت البداية على التايم لاين (بالثانية)
+  final double endTime;               // وقت النهاية على التايم لاين (بالثانية)
+  final double clipStartOffset;       // نقطة البداية داخل الملف الأصلي
+  final double clipEndOffset;         // نقطة النهاية داخل الملف الأصلي
+  final int trackIndex;               // رقم المسار (0 = مسار الفيديو الرئيسي)
+  final double volume;                // مستوى الصوت (0.0 إلى 1.0)
+  final double speed;                 // سرعة التشغيل (1.0 = عادي، 2.0 = ضعفين)
+  final List<VideoEffect> effects;    // قائمة التأثيرات المطبقة
+  final VideoTransform transform;     // تحويلات الحجم والموضع والدوران
+  final String? thumbnailPath;        // مسار الصورة المصغرة للتايم لاين
+  final bool isMuted;                 // هل الصوت مكتوم؟
+  final ClipType clipType;            // نوع المقطع (فيديو، صورة، لون)
+  const VideoClip({
+    required this.id,
+    required this.originalPath,
+    required this.proxyPath,
+    required this.startTime,
+    required this.endTime,
+    required this.clipStartOffset,
+    required this.clipEndOffset,
+    required this.trackIndex,
+    this.volume = 1.0,
+    this.speed = 1.0,
+    this.effects = const [],
+    required this.transform,
+    this.thumbnailPath,
+    this.isMuted = false,
+    this.clipType = ClipType.video,
+  });
+  // دالة المصنع لإنشاء مقطع جديد بقيم افتراضية
+  factory VideoClip.create({
+    required String originalPath,
+    required String proxyPath,
+    required double startTime,
+    required double duration,
+    int trackIndex = 0,
+  }) {
+    return VideoClip(
+      id: const Uuid().v4(),
+      originalPath: originalPath,
+      proxyPath: proxyPath,
+      startTime: startTime,
+      endTime: startTime + duration,
+      clipStartOffset: 0.0,
+      clipEndOffset: duration,
+      trackIndex: trackIndex,
+      transform: VideoTransform.identity(),
+    );
+  }
+  // مدة المقطع على التايم لاين
+  double get duration => endTime - startTime;
+  // مدة محتوى المقطع من الملف الأصلي
+  double get contentDuration => clipEndOffset - clipStartOffset;
+  // نسخ المقطع مع تعديلات
+  VideoClip copyWith({
+    String? id,
+    String? originalPath,
+    String? proxyPath,
+    double? startTime,
+    double? endTime,
+    double? clipStartOffset,
+    double? clipEndOffset,
+    int? trackIndex,
+    double? volume,
+    double? speed,
+    List<VideoEffect>? effects,
+    VideoTransform? transform,
+    String? thumbnailPath,
+    bool? isMuted,
+    ClipType? clipType,
+  }) {
+    return VideoClip(
+      id: id ?? this.id,
+      originalPath: originalPath ?? this.originalPath,
+      proxyPath: proxyPath ?? this.proxyPath,
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
+      clipStartOffset: clipStartOffset ?? this.clipStartOffset,
+      clipEndOffset: clipEndOffset ?? this.clipEndOffset,
+      trackIndex: trackIndex ?? this.trackIndex,
+      volume: volume ?? this.volume,
+      speed: speed ?? this.speed,
+      effects: effects ?? this.effects,
+      transform: transform ?? this.transform,
+      thumbnailPath: thumbnailPath ?? this.thumbnailPath,
+      isMuted: isMuted ?? this.isMuted,
+      clipType: clipType ?? this.clipType,
+    );
+  }
+  // تحويل إلى JSON للحفظ
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'originalPath': originalPath,
+      'proxyPath': proxyPath,
+      'startTime': startTime,
+      'endTime': endTime,
+      'clipStartOffset': clipStartOffset,
+      'clipEndOffset': clipEndOffset,
+      'trackIndex': trackIndex,
+      'volume': volume,
+      'speed': speed,
+      'effects': effects.map((e) => e.toJson()).toList(),
+      'transform': transform.toJson(),
+      'thumbnailPath': thumbnailPath,
+      'isMuted': isMuted,
+      'clipType': clipType.name,
+    };
+  }
+  // إنشاء من JSON
+  factory VideoClip.fromJson(Map<String, dynamic> json) {
+    return VideoClip(
+      id: json['id'] as String,
+      originalPath: json['originalPath'] as String,
+      proxyPath: json['proxyPath'] as String,
+      startTime: (json['startTime'] as num).toDouble(),
+      endTime: (json['endTime'] as num).toDouble(),
+      clipStartOffset: (json['clipStartOffset'] as num).toDouble(),
+      clipEndOffset: (json['clipEndOffset'] as num).toDouble(),
+      trackIndex: json['trackIndex'] as int,
+      volume: (json['volume'] as num).toDouble(),
+      speed: (json['speed'] as num).toDouble(),
+      effects: (json['effects'] as List)
+          .map((e) => VideoEffect.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      transform: VideoTransform.fromJson(
+          json['transform'] as Map<String, dynamic>),
+      thumbnailPath: json['thumbnailPath'] as String?,
+      isMuted: json['isMuted'] as bool,
+      clipType: ClipType.values.byName(json['clipType'] as String),
+    );
+  }
+  @override
+  List<Object?> get props => [
+        id, originalPath, proxyPath, startTime, endTime,
+        clipStartOffset, clipEndOffset, trackIndex, volume,
+        speed, effects, transform, thumbnailPath, isMuted, clipType,
+      ];
+}
+// ====================================================
+// نوع المقطع
+// ====================================================
+enum ClipType { video, image, solidColor }
+// ====================================================
+// نموذج تحويلات الفيديو (الحجم، الموضع، الدوران)
+// ====================================================
+class VideoTransform extends Equatable {
+  final double x;           // الموضع الأفقي
+  final double y;           // الموضع الرأسي
+  final double scaleX;      // الحجم الأفقي
+  final double scaleY;      // الحجم الرأسي
+  final double rotation;    // الدوران بالدرجات
+  final double opacity;     // الشفافية (0.0 إلى 1.0)
+  const VideoTransform({
+    required this.x,
+    required this.y,
+    required this.scaleX,
+    required this.scaleY,
+    required this.rotation,
+    required this.opacity,
+  });
+  // قيم محايدة (لا تغيير)
+  factory VideoTransform.identity() {
+    return const VideoTransform(
+      x: 0.0, y: 0.0,
+      scaleX: 1.0, scaleY: 1.0,
+      rotation: 0.0, opacity: 1.0,
+    );
+  }
+  Map<String, dynamic> toJson() => {
+    'x': x, 'y': y, 'scaleX': scaleX, 'scaleY': scaleY,
+    'rotation': rotation, 'opacity': opacity,
+  };
+  factory VideoTransform.fromJson(Map<String, dynamic> json) {
+    return VideoTransform(
+      x: (json['x'] as num).toDouble(),
+      y: (json['y'] as num).toDouble(),
+      scaleX: (json['scaleX'] as num).toDouble(),
+      scaleY: (json['scaleY'] as num).toDouble(),
+      rotation: (json['rotation'] as num).toDouble(),
+      opacity: (json['opacity'] as num).toDouble(),
+    );
+  }
+  VideoTransform copyWith({
+    double? x, double? y, double? scaleX, double? scaleY,
+    double? rotation, double? opacity,
+  }) {
+    return VideoTransform(
+      x: x ?? this.x, y: y ?? this.y,
+      scaleX: scaleX ?? this.scaleX, scaleY: scaleY ?? this.scaleY,
+      rotation: rotation ?? this.rotation, opacity: opacity ?? this.opacity,
+    );
+  }
+  @override
+  List<Object?> get props => [x, y, scaleX, scaleY, rotation, opacity];
+}
+// ====================================================
+// نموذج التأثيرات (Effects)
+// ====================================================
+class VideoEffect extends Equatable {
+  final String id;
+  final EffectType type;
+  final Map<String, dynamic> parameters;   // معاملات التأثير (مرونة كاملة)
+  final bool isEnabled;
+  const VideoEffect({
+    required this.id,
+    required this.type,
+    required this.parameters,
+    this.isEnabled = true,
+  });
+  factory VideoEffect.create({
+    required EffectType type,
+    Map<String, dynamic> parameters = const {},
+  }) {
+    return VideoEffect(
+      id: const Uuid().v4(),
+      type: type,
+      parameters: parameters,
+    );
+  }
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'type': type.name,
+    'parameters': parameters,
+    'isEnabled': isEnabled,
+  };
+  factory VideoEffect.fromJson(Map<String, dynamic> json) {
+    return VideoEffect(
+      id: json['id'] as String,
+      type: EffectType.values.byName(json['type'] as String),
+      parameters: Map<String, dynamic>.from(json['parameters'] as Map),
+      isEnabled: json['isEnabled'] as bool,
+    );
+  }
+  VideoEffect copyWith({
+    String? id, EffectType? type,
+    Map<String, dynamic>? parameters, bool? isEnabled,
+  }) {
+    return VideoEffect(
+      id: id ?? this.id,
+      type: type ?? this.type,
+      parameters: parameters ?? this.parameters,
+      isEnabled: isEnabled ?? this.isEnabled,
+    );
+  }
+  @override
+  List<Object?> get props => [id, type, parameters, isEnabled];
+}
+// أنواع التأثيرات المتاحة
+enum EffectType {
+  colorGrade,         // تصحيح الألوان
+  blur,               // ضبابية
+  sharpen,            // حدة
+  brightness,         // سطوع
+  contrast,           // تباين
+  saturation,         // تشبع
+  temperature,        // درجة الحرارة اللونية
+  vignette,           // تعتيم الحواف
+  filmGrain,          // حبيبات الفيلم
+  glitch,             // تأثير التشويش
+  chromaKey,          // إزالة الخلفية بالكروما
+  backgroundRemoval,  // إزالة الخلفية بالذكاء الاصطناعي
+  motionTracking,     // تتبع الحركة
+  stabilization,      // تثبيت الصورة
+  speedRamp,          // تغيير سرعة ديناميكي
+  lumaKey,            // مفتاح السطوع
+}
+// ====================================================
+// نموذج مقطع الصوت (Audio Clip)
+// ====================================================
+class AudioClip extends Equatable {
+  final String id;
+  final String filePath;
+  final double startTime;       // وقت البداية على التايم لاين
+  final double endTime;         // وقت النهاية على التايم لاين
+  final double audioOffset;     // نقطة البداية داخل الملف الصوتي
+  final double volume;          // مستوى الصوت
+  final double fadeInDuration;  // مدة الـ Fade In
+  final double fadeOutDuration; // مدة الـ Fade Out
+  final int trackIndex;         // رقم مسار الصوت
+  final bool isMuted;
+  final AudioType audioType;    // نوع الصوت
+  const AudioClip({
+    required this.id,
+    required this.filePath,
+    required this.startTime,
+    required this.endTime,
+    required this.audioOffset,
+    this.volume = 1.0,
+    this.fadeInDuration = 0.0,
+    this.fadeOutDuration = 0.0,
+    required this.trackIndex,
+    this.isMuted = false,
+    this.audioType = AudioType.music,
+  });
+  factory AudioClip.create({
+    required String filePath,
+    required double startTime,
+    required double duration,
+    int trackIndex = 1,
+    AudioType audioType = AudioType.music,
+  }) {
+    return AudioClip(
+      id: const Uuid().v4(),
+      filePath: filePath,
+      startTime: startTime,
+      endTime: startTime + duration,
+      audioOffset: 0.0,
+      trackIndex: trackIndex,
+      audioType: audioType,
+    );
+  }
+  double get duration => endTime - startTime;
+  Map<String, dynamic> toJson() => {
+    'id': id, 'filePath': filePath,
+    'startTime': startTime, 'endTime': endTime,
+    'audioOffset': audioOffset, 'volume': volume,
+    'fadeInDuration': fadeInDuration, 'fadeOutDuration': fadeOutDuration,
+    'trackIndex': trackIndex, 'isMuted': isMuted,
+    'audioType': audioType.name,
+  };
+  factory AudioClip.fromJson(Map<String, dynamic> json) {
+    return AudioClip(
+      id: json['id'] as String,
+      filePath: json['filePath'] as String,
+      startTime: (json['startTime'] as num).toDouble(),
+      endTime: (json['endTime'] as num).toDouble(),
+      audioOffset: (json['audioOffset'] as num).toDouble(),
+      volume: (json['volume'] as num).toDouble(),
+      fadeInDuration: (json['fadeInDuration'] as num).toDouble(),
+      fadeOutDuration: (json['fadeOutDuration'] as num).toDouble(),
+      trackIndex: json['trackIndex'] as int,
+      isMuted: json['isMuted'] as bool,
+      audioType: AudioType.values.byName(json['audioType'] as String),
+    );
+  }
+  AudioClip copyWith({
+    String? id, String? filePath,
+    double? startTime, double? endTime, double? audioOffset,
+    double? volume, double? fadeInDuration, double? fadeOutDuration,
+    int? trackIndex, bool? isMuted, AudioType? audioType,
+  }) {
+    return AudioClip(
+      id: id ?? this.id, filePath: filePath ?? this.filePath,
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
+      audioOffset: audioOffset ?? this.audioOffset,
+      volume: volume ?? this.volume,
+      fadeInDuration: fadeInDuration ?? this.fadeInDuration,
+      fadeOutDuration: fadeOutDuration ?? this.fadeOutDuration,
+      trackIndex: trackIndex ?? this.trackIndex,
+      isMuted: isMuted ?? this.isMuted,
+      audioType: audioType ?? this.audioType,
+    );
+  }
+  @override
+  List<Object?> get props => [
+    id, filePath, startTime, endTime, audioOffset,
+    volume, fadeInDuration, fadeOutDuration, trackIndex, isMuted, audioType,
+  ];
+}
+enum AudioType { music, voiceOver, soundEffect, videoAudio }
+// ====================================================
+// نموذج طبقة النص (Text Layer)
+// ====================================================
+class TextLayer extends Equatable {
+  final String id;
+  final String text;
+  final double startTime;
+  final double endTime;
+  final TextStyle style;          // تنسيق النص
+  final VideoTransform transform; // موضع وحجم النص
+  final TextAnimation animation;  // حركة دخول وخروج النص
+  final bool isSubtitle;          // هل هو ترجمة تلقائية؟
+  const TextLayer({
+    required this.id,
+    required this.text,
+    required this.startTime,
+    required this.endTime,
+    required this.style,
+    required this.transform,
+    required this.animation,
+    this.isSubtitle = false,
+  });
+  factory TextLayer.create({
+    required String text,
+    required double startTime,
+    double duration = 3.0,
+  }) {
+    return TextLayer(
+      id: const Uuid().v4(),
+      text: text,
+      startTime: startTime,
+      endTime: startTime + duration,
+      style: const TextStyle(
+        color: Color(0xFFFFFFFF),
+        fontSize: 24,
+        fontWeight: FontWeight.bold,
+      ),
+      transform: VideoTransform(
+        x: 0, y: 0.8,
+        scaleX: 1.0, scaleY: 1.0,
+        rotation: 0.0, opacity: 1.0,
+      ),
+      animation: TextAnimation.fadeIn,
+    );
+  }
+  double get duration => endTime - startTime;
+  Map<String, dynamic> toJson() => {
+    'id': id, 'text': text,
+    'startTime': startTime, 'endTime': endTime,
+    'styleColor': style.color?.value,
+    'styleFontSize': style.fontSize,
+    'styleFontWeight': style.fontWeight?.index,
+    'transform': transform.toJson(),
+    'animation': animation.name,
+    'isSubtitle': isSubtitle,
+  };
+  factory TextLayer.fromJson(Map<String, dynamic> json) {
+    return TextLayer(
+      id: json['id'] as String,
+      text: json['text'] as String,
+      startTime: (json['startTime'] as num).toDouble(),
+      endTime: (json['endTime'] as num).toDouble(),
+      style: TextStyle(
+        color: Color(json['styleColor'] as int),
+        fontSize: (json['styleFontSize'] as num).toDouble(),
+        fontWeight: FontWeight.values[json['styleFontWeight'] as int],
+      ),
+      transform: VideoTransform.fromJson(
+          json['transform'] as Map<String, dynamic>),
+      animation: TextAnimation.values.byName(json['animation'] as String),
+      isSubtitle: json['isSubtitle'] as bool,
+    );
+  }
+  TextLayer copyWith({
+    String? id, String? text,
+    double? startTime, double? endTime,
+    TextStyle? style, VideoTransform? transform,
+    TextAnimation? animation, bool? isSubtitle,
+  }) {
+    return TextLayer(
+      id: id ?? this.id, text: text ?? this.text,
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
+      style: style ?? this.style,
+      transform: transform ?? this.transform,
+      animation: animation ?? this.animation,
+      isSubtitle: isSubtitle ?? this.isSubtitle,
+    );
+  }
+  @override
+  List<Object?> get props => [
+    id, text, startTime, endTime, style, transform, animation, isSubtitle,
+  ];
+}
+enum TextAnimation { none, fadeIn, fadeOut, fadeInOut, slideIn, typewriter, pop }
+// ====================================================
+// نموذج حالة التايم لاين (Timeline State)
+// هذا هو الـ JSON الذي يُحفظ لكل عملية Undo/Redo
+// ====================================================
+class TimelineState extends Equatable {
+  final String projectId;
+  final List<VideoClip> videoClips;
+  final List<AudioClip> audioClips;
+  final List<TextLayer> textLayers;
+  final double totalDuration;
+  final int videoTrackCount;     // عدد مسارات الفيديو
+  final int audioTrackCount;     // عدد مسارات الصوت
+  final ProjectSettings settings;
+  const TimelineState({
+    required this.projectId,
+    required this.videoClips,
+    required this.audioClips,
+    required this.textLayers,
+    required this.totalDuration,
+    required this.videoTrackCount,
+    required this.audioTrackCount,
+    required this.settings,
+  });
+  factory TimelineState.empty(String projectId) {
+    return TimelineState(
+      projectId: projectId,
+      videoClips: const [],
+      audioClips: const [],
+      textLayers: const [],
+      totalDuration: 0.0,
+      videoTrackCount: 2,
+      audioTrackCount: 3,
+      settings: ProjectSettings.defaultSettings(),
+    );
+  }
+  // حساب المدة الإجمالية تلقائياً من المقاطع
+  double get calculatedDuration {
+    double maxTime = 0;
+    for (final clip in videoClips) {
+      if (clip.endTime > maxTime) maxTime = clip.endTime;
+    }
+    for (final clip in audioClips) {
+      if (clip.endTime > maxTime) maxTime = clip.endTime;
+    }
+    return maxTime;
+  }
+  Map<String, dynamic> toJson() => {
+    'projectId': projectId,
+    'videoClips': videoClips.map((c) => c.toJson()).toList(),
+    'audioClips': audioClips.map((c) => c.toJson()).toList(),
+    'textLayers': textLayers.map((t) => t.toJson()).toList(),
+    'totalDuration': totalDuration,
+    'videoTrackCount': videoTrackCount,
+    'audioTrackCount': audioTrackCount,
+    'settings': settings.toJson(),
+  };
+  factory TimelineState.fromJson(Map<String, dynamic> json) {
+    return TimelineState(
+      projectId: json['projectId'] as String,
+      videoClips: (json['videoClips'] as List)
+          .map((c) => VideoClip.fromJson(c as Map<String, dynamic>))
+          .toList(),
+      audioClips: (json['audioClips'] as List)
+          .map((c) => AudioClip.fromJson(c as Map<String, dynamic>))
+          .toList(),
+      textLayers: (json['textLayers'] as List)
+          .map((t) => TextLayer.fromJson(t as Map<String, dynamic>))
+          .toList(),
+      totalDuration: (json['totalDuration'] as num).toDouble(),
+      videoTrackCount: json['videoTrackCount'] as int,
+      audioTrackCount: json['audioTrackCount'] as int,
+      settings: ProjectSettings.fromJson(
+          json['settings'] as Map<String, dynamic>),
+    );
+  }
+  TimelineState copyWith({
+    String? projectId,
+    List<VideoClip>? videoClips,
+    List<AudioClip>? audioClips,
+    List<TextLayer>? textLayers,
+    double? totalDuration,
+    int? videoTrackCount,
+    int? audioTrackCount,
+    ProjectSettings? settings,
+  }) {
+    return TimelineState(
+      projectId: projectId ?? this.projectId,
+      videoClips: videoClips ?? this.videoClips,
+      audioClips: audioClips ?? this.audioClips,
+      textLayers: textLayers ?? this.textLayers,
+      totalDuration: totalDuration ?? this.totalDuration,
+      videoTrackCount: videoTrackCount ?? this.videoTrackCount,
+      audioTrackCount: audioTrackCount ?? this.audioTrackCount,
+      settings: settings ?? this.settings,
+    );
+  }
+  @override
+  List<Object?> get props => [
+    projectId, videoClips, audioClips, textLayers,
+    totalDuration, videoTrackCount, audioTrackCount, settings,
+  ];
+}
+// ====================================================
+// إعدادات المشروع
+// ====================================================
+class ProjectSettings extends Equatable {
+  final String resolution;      // "4K", "1080p", "720p"
+  final double frameRate;       // 24, 30, 60
+  final String aspectRatio;     // "16:9", "9:16", "1:1", "4:3"
+  final String colorProfile;    // "sRGB", "HDR10", "Rec.2020"
+  const ProjectSettings({
+    required this.resolution,
+    required this.frameRate,
+    required this.aspectRatio,
+    required this.colorProfile,
+  });
+  factory ProjectSettings.defaultSettings() {
+    return const ProjectSettings(
+      resolution: '1080p',
+      frameRate: 30.0,
+      aspectRatio: '9:16',     // الوضع الرأسي للهاتف افتراضياً
+      colorProfile: 'sRGB',
+    );
+  }
+  Map<String, dynamic> toJson() => {
+    'resolution': resolution,
+    'frameRate': frameRate,
+    'aspectRatio': aspectRatio,
+    'colorProfile': colorProfile,
+  };
+  factory ProjectSettings.fromJson(Map<String, dynamic> json) {
+    return ProjectSettings(
+      resolution: json['resolution'] as String,
+      frameRate: (json['frameRate'] as num).toDouble(),
+      aspectRatio: json['aspectRatio'] as String,
+      colorProfile: json['colorProfile'] as String,
+    );
+  }
+  @override
+  List<Object?> get props => [resolution, frameRate, aspectRatio, colorProfile];
+}
+```
+---
+### الخطوة 8: خدمة Undo/Redo المتقدمة
+**المسار:** `lib/core/services/undo_redo_service.dart`
+```dart
+// lib/core/services/undo_redo_service.dart
+// هذه الخدمة هي قلب نظام التراجع/الإعادة
+// كل تعديل يُحفظ كـ JSON خفيف على التخزين المحلي
+// بدلاً من تخزين كل الفيديوهات نفسها نُخزّن فقط "وصف" التايم لاين
+import 'dart:convert';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import '../models/timeline_models.dart';
+class UndoRedoService {
+  // الحد الأقصى لعدد الخطوات المحفوظة (لتوفير الذاكرة)
+  static const int _maxHistorySize = 100;
+  // اسم المشروع الحالي
+  final String projectId;
+  // مؤشر الخطوة الحالية في التاريخ
+  int _currentIndex = -1;
+  // قائمة مسارات ملفات JSON المحفوظة على القرص
+  final List<String> _historyFilePaths = [];
+  UndoRedoService({required this.projectId});
+  // ====================================================
+  // هل يمكن التراجع؟
+  // ====================================================
+  bool get canUndo => _currentIndex > 0;
+  // ====================================================
+  // هل يمكن الإعادة؟
+  // ====================================================
+  bool get canRedo => _currentIndex < _historyFilePaths.length - 1;
+  // ====================================================
+  // حفظ حالة جديدة (يُستدعى بعد كل تعديل)
+  // ====================================================
+  Future<void> pushState(TimelineState state) async {
+    // إذا أجرى المستخدم تعديلاً جديداً بعد التراجع، احذف المستقبل
+    if (_currentIndex < _historyFilePaths.length - 1) {
+      final filesToDelete = _historyFilePaths.sublist(_currentIndex + 1);
+      for (final path in filesToDelete) {
+        final file = File(path);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      }
+      _historyFilePaths.removeRange(_currentIndex + 1, _historyFilePaths.length);
+    }
+    // إذا وصلنا للحد الأقصى، احذف أقدم حالة
+    if (_historyFilePaths.length >= _maxHistorySize) {
+      final oldestPath = _historyFilePaths.removeAt(0);
+      final file = File(oldestPath);
+      if (await file.exists()) {
+        await file.delete();
+      }
+      _currentIndex--;
+    }
+    // احفظ الحالة الجديدة كملف JSON
+    final filePath = await _saveStateToFile(state);
+    _historyFilePaths.add(filePath);
+    _currentIndex = _historyFilePaths.length - 1;
+  }
+  // ====================================================
+  // تراجع (Undo) - ارجع للحالة السابقة
+  // ====================================================
+  Future<TimelineState?> undo() async {
+    if (!canUndo) return null;
+    _currentIndex--;
+    return await _loadStateFromFile(_historyFilePaths[_currentIndex]);
+  }
+  // ====================================================
+  // إعادة (Redo) - اذهب للحالة التالية
+  // ====================================================
+  Future<TimelineState?> redo() async {
+    if (!canRedo) return null;
+    _currentIndex++;
+    return await _loadStateFromFile(_historyFilePaths[_currentIndex]);
+  }
+  // ====================================================
+  // حفظ الحالة في ملف JSON على القرص
+  // ====================================================
+  Future<String> _saveStateToFile(TimelineState state) async {
+    // الحصول على مجلد مؤقت للتطبيق
+    final tempDir = await getTemporaryDirectory();
+    final historyDir = Directory('${tempDir.path}/undo_history/$projectId');
+    
+    // إنشاء المجلد إذا لم يكن موجوداً
+    if (!await historyDir.exists()) {
+      await historyDir.create(recursive: true);
+    }
+    // اسم الملف يحتوي على الطابع الزمني لضمان التفرد
+    final timestamp = DateTime.now().microsecondsSinceEpoch;
+    final filePath = '${historyDir.path}/state_$timestamp.json';
+    // تحويل الحالة إلى JSON وحفظها
+    final jsonString = json.encode(state.toJson());
+    final file = File(filePath);
+    await file.writeAsString(jsonString, flush: true);
+    return filePath;
+  }
+  // ====================================================
+  // تحميل الحالة من ملف JSON
+  // ====================================================
+  Future<TimelineState?> _loadStateFromFile(String filePath) async {
+    try {
+      final file = File(filePath);
+      if (!await file.exists()) return null;
+      
+      final jsonString = await file.readAsString();
+      final jsonMap = json.decode(jsonString) as Map<String, dynamic>;
+      return TimelineState.fromJson(jsonMap);
+    } catch (e) {
+      // إذا فسد الملف، تجاهله وأعد null
+      return null;
+    }
+  }
+  // ====================================================
+  // مسح كل التاريخ عند إغلاق المشروع
+  // ====================================================
+  Future<void> clearHistory() async {
+    for (final path in _historyFilePaths) {
+      final file = File(path);
+      if (await file.exists()) {
+        await file.delete();
+      }
+    }
+    _historyFilePaths.clear();
+    _currentIndex = -1;
+  }
+  // ====================================================
+  // الحصول على معلومات التاريخ (للعرض في الـ UI)
+  // ====================================================
+  HistoryInfo get historyInfo => HistoryInfo(
+    totalSteps: _historyFilePaths.length,
+    currentStep: _currentIndex,
+    canUndo: canUndo,
+    canRedo: canRedo,
+  );
+}
+// نموذج معلومات التاريخ للعرض
+class HistoryInfo {
+  final int totalSteps;
+  final int currentStep;
+  final bool canUndo;
+  final bool canRedo;
+  const HistoryInfo({
+    required this.totalSteps,
+    required this.currentStep,
+    required this.canUndo,
+    required this.canRedo,
+  });
+}
+```
+---
+### الخطوة 9: نظام إدارة الحالة (Cubit)
+**المسار:** `lib/features/editor/presentation/cubit/editor_cubit.dart`
+```dart
+// lib/features/editor/presentation/cubit/editor_cubit.dart
+// هذا الـ Cubit هو المحرك المركزي لكل عمليات المحرر
+// كل تعديل في التايم لاين يمر عبر هذا الكلاس
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:equatable/equatable.dart';
+import '../../../../core/models/timeline_models.dart';
+import '../../../../core/services/undo_redo_service.dart';
+import '../../../../shared/constants/app_constants.dart';
+// ====================================================
+// حالة المحرر
+// ====================================================
+class EditorState extends Equatable {
+  final TimelineState timelineState;
+  final double currentPlayheadPosition;    // موضع مؤشر التشغيل بالثانية
+  final bool isPlaying;                    // هل الفيديو يشتغل؟
+  final double timelineZoom;               // مستوى التكبير (1.0 = عادي)
+  final double timelineScrollOffset;       // موضع التمرير
+  final String? selectedClipId;           // معرف المقطع المحدد
+  final EditorTool activeTool;            // الأداة النشطة حالياً
+  final bool canUndo;
+  final bool canRedo;
+  final bool isExporting;
+  final double exportProgress;
+  final EditorStatus status;
+  final String? errorMessage;
+  final bool isAIPanelOpen;               // هل لوحة الذكاء الاصطناعي مفتوحة؟
+  final bool isAudioPanelOpen;            // هل لوحة الصوت مفتوحة؟
+  final bool isTextPanelOpen;             // هل لوحة النص مفتوحة؟
+  const EditorState({
+    required this.timelineState,
+    this.currentPlayheadPosition = 0.0,
+    this.isPlaying = false,
+    this.timelineZoom = 1.0,
+    this.timelineScrollOffset = 0.0,
+    this.selectedClipId,
+    this.activeTool = EditorTool.select,
+    this.canUndo = false,
+    this.canRedo = false,
+    this.isExporting = false,
+    this.exportProgress = 0.0,
+    this.status = EditorStatus.idle,
+    this.errorMessage,
+    this.isAIPanelOpen = false,
+    this.isAudioPanelOpen = false,
+    this.isTextPanelOpen = false,
+  });
+  factory EditorState.initial(String projectId) {
+    return EditorState(
+      timelineState: TimelineState.empty(projectId),
+    );
+  }
+  EditorState copyWith({
+    TimelineState? timelineState,
+    double? currentPlayheadPosition,
+    bool? isPlaying,
+    double? timelineZoom,
+    double? timelineScrollOffset,
+    String? selectedClipId,
+    EditorTool? activeTool,
+    bool? canUndo,
+    bool? canRedo,
+    bool? isExporting,
+    double? exportProgress,
+    EditorStatus? status,
+    String? errorMessage,
+    bool? isAIPanelOpen,
+    bool? isAudioPanelOpen,
+    bool? isTextPanelOpen,
+    bool clearSelectedClip = false,
+    bool clearError = false,
+  }) {
+    return EditorState(
+      timelineState: timelineState ?? this.timelineState,
+      currentPlayheadPosition: currentPlayheadPosition ?? this.currentPlayheadPosition,
+      isPlaying: isPlaying ?? this.isPlaying,
+      timelineZoom: timelineZoom ?? this.timelineZoom,
+      timelineScrollOffset: timelineScrollOffset ?? this.timelineScrollOffset,
+      selectedClipId: clearSelectedClip ? null : (selectedClipId ?? this.selectedClipId),
+      activeTool: activeTool ?? this.activeTool,
+      canUndo: canUndo ?? this.canUndo,
+      canRedo: canRedo ?? this.canRedo,
+      isExporting: isExporting ?? this.isExporting,
+      exportProgress: exportProgress ?? this.exportProgress,
+      status: status ?? this.status,
+      errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+      isAIPanelOpen: isAIPanelOpen ?? this.isAIPanelOpen,
+      isAudioPanelOpen: isAudioPanelOpen ?? this.isAudioPanelOpen,
+      isTextPanelOpen: isTextPanelOpen ?? this.isTextPanelOpen,
+    );
+  }
+  @override
+  List<Object?> get props => [
+    timelineState, currentPlayheadPosition, isPlaying,
+    timelineZoom, timelineScrollOffset, selectedClipId,
+    activeTool, canUndo, canRedo, isExporting, exportProgress,
+    status, errorMessage, isAIPanelOpen, isAudioPanelOpen, isTextPanelOpen,
+  ];
+}
+enum EditorTool { select, cut, text, audio, templates, aiCommands }
+enum EditorStatus { idle, loading, processing, error }
+// ====================================================
+// محرك الحالة (Cubit)
+// ====================================================
+class EditorCubit extends Cubit<EditorState> {
+  final UndoRedoService _undoRedoService;
+  EditorCubit({required String projectId})
+      : _undoRedoService = UndoRedoService(projectId: projectId),
+        super(EditorState.initial(projectId));
+  // ====================================================
+  // إضافة مقطع فيديو للتايم لاين
+  // ====================================================
+  Future<void> addVideoClip(VideoClip clip) async {
+    final newClips = [...state.timelineState.videoClips, clip];
+    final newTimelineState = state.timelineState.copyWith(
+      videoClips: newClips,
+      totalDuration: _calculateTotalDuration(newClips, state.timelineState.audioClips),
+    );
+    
+    // حفظ الحالة الجديدة لنظام Undo
+    await _undoRedoService.pushState(newTimelineState);
+    
+    final historyInfo = _undoRedoService.historyInfo;
+    emit(state.copyWith(
+      timelineState: newTimelineState,
+      canUndo: historyInfo.canUndo,
+      canRedo: historyInfo.canRedo,
+    ));
+  }
+  // ====================================================
+  // إضافة مقطع صوت للتايم لاين
+  // ====================================================
+  Future<void> addAudioClip(AudioClip clip) async {
+    final newClips = [...state.timelineState.audioClips, clip];
+    final newTimelineState = state.timelineState.copyWith(
+      audioClips: newClips,
+      totalDuration: _calculateTotalDuration(
+          state.timelineState.videoClips, newClips),
+    );
+    
+    await _undoRedoService.pushState(newTimelineState);
+    final historyInfo = _undoRedoService.historyInfo;
+    emit(state.copyWith(
+      timelineState: newTimelineState,
+      canUndo: historyInfo.canUndo,
+      canRedo: historyInfo.canRedo,
+    ));
+  }
+  // ====================================================
+  // تحريك مقطع على التايم لاين (Drag)
+  // ====================================================
+  Future<void> moveVideoClip({
+    required String clipId,
+    required double newStartTime,
+    required int newTrackIndex,
+  }) async {
+    final clipIndex = state.timelineState.videoClips
+        .indexWhere((c) => c.id == clipId);
+    if (clipIndex == -1) return;
+    final clip = state.timelineState.videoClips[clipIndex];
+    final duration = clip.duration;
+    
+    final updatedClip = clip.copyWith(
+      startTime: newStartTime,
+      endTime: newStartTime + duration,
+      trackIndex: newTrackIndex,
+    );
+    
+    final newClips = [...state.timelineState.videoClips];
+    newClips[clipIndex] = updatedClip;
+    
+    final newTimelineState = state.timelineState.copyWith(
+      videoClips: newClips,
+      totalDuration: _calculateTotalDuration(newClips, state.timelineState.audioClips),
+    );
+    
+    await _undoRedoService.pushState(newTimelineState);
+    final historyInfo = _undoRedoService.historyInfo;
+    emit(state.copyWith(
+      timelineState: newTimelineState,
+      canUndo: historyInfo.canUndo,
+      canRedo: historyInfo.canRedo,
+    ));
+  }
+  // ====================================================
+  // قص مقطع (Trim) من اليمين أو اليسار
+  // ====================================================
+  Future<void> trimVideoClip({
+    required String clipId,
+    double? newStartTime,
+    double? newEndTime,
+    double? newClipStartOffset,
+    double? newClipEndOffset,
+  }) async {
+    final clipIndex = state.timelineState.videoClips
+        .indexWhere((c) => c.id == clipId);
+    if (clipIndex == -1) return;
+    final clip = state.timelineState.videoClips[clipIndex];
+    final updatedClip = clip.copyWith(
+      startTime: newStartTime,
+      endTime: newEndTime,
+      clipStartOffset: newClipStartOffset,
+      clipEndOffset: newClipEndOffset,
+    );
+    
+    final newClips = [...state.timelineState.videoClips];
+    newClips[clipIndex] = updatedClip;
+    
+    final newTimelineState = state.timelineState.copyWith(
+      videoClips: newClips,
+      totalDuration: _calculateTotalDuration(newClips, state.timelineState.audioClips),
+    );
+    
+    await _undoRedoService.pushState(newTimelineState);
+    final historyInfo = _undoRedoService.historyInfo;
+    emit(state.copyWith(
+      timelineState: newTimelineState,
+      canUndo: historyInfo.canUndo,
+      canRedo: historyInfo.canRedo,
+    ));
+  }
+  // ====================================================
+  // حذف مقطع
+  // ====================================================
+  Future<void> deleteVideoClip(String clipId) async {
+    final newClips = state.timelineState.videoClips
+        .where((c) => c.id != clipId)
+        .toList();
+    
+    final newTimelineState = state.timelineState.copyWith(
+      videoClips: newClips,
+      totalDuration: _calculateTotalDuration(newClips, state.timelineState.audioClips),
+    );
+    
+    await _undoRedoService.pushState(newTimelineState);
+    final historyInfo = _undoRedoService.historyInfo;
+    emit(state.copyWith(
+      timelineState: newTimelineState,
+      canUndo: historyInfo.canUndo,
+      canRedo: historyInfo.canRedo,
+      clearSelectedClip: true,
+    ));
+  }
+  // ====================================================
+  // تطبيق تأثير على مقطع
+  // ====================================================
+  Future<void> applyEffectToClip({
+    required String clipId,
+    required VideoEffect effect,
+  }) async {
+    final clipIndex = state.timelineState.videoClips
+        .indexWhere((c) => c.id == clipId);
+    if (clipIndex == -1) return;
+    final clip = state.timelineState.videoClips[clipIndex];
+    
+    // تحقق إذا كان التأثير موجوداً بالفعل وقم بتحديثه
+    final existingEffectIndex = clip.effects.indexWhere((e) => e.type == effect.type);
+    List<VideoEffect> newEffects;
+    
+    if (existingEffectIndex >= 0) {
+      newEffects = [...clip.effects];
+      newEffects[existingEffectIndex] = effect;
+    } else {
+      newEffects = [...clip.effects, effect];
+    }
+    
+    final updatedClip = clip.copyWith(effects: newEffects);
+    final newClips = [...state.timelineState.videoClips];
+    newClips[clipIndex] = updatedClip;
+    
+    final newTimelineState = state.timelineState.copyWith(videoClips: newClips);
+    await _undoRedoService.pushState(newTimelineState);
+    final historyInfo = _undoRedoService.historyInfo;
+    emit(state.copyWith(
+      timelineState: newTimelineState,
+      canUndo: historyInfo.canUndo,
+      canRedo: historyInfo.canRedo,
+    ));
+  }
+  // ====================================================
+  // تنفيذ أوامر الذكاء الاصطناعي على التايم لاين
+  // تأخذ هذه الدالة قائمة JSON Actions وتطبقها
+  // ====================================================
+  Future<void> applyAIActions(List<Map<String, dynamic>> actions) async {
+    emit(state.copyWith(status: EditorStatus.processing));
+    
+    TimelineState currentTimeline = state.timelineState;
+    
+    // تطبيق كل أمر واحداً تلو الآخر
+    for (final action in actions) {
+      final actionType = action['type'] as String;
+      
+      switch (actionType) {
+        case 'apply_color_grade':
+          // تطبيق تصحيح الألوان على كل مقاطع الفيديو
+          final parameters = action['parameters'] as Map<String, dynamic>;
+          final effect = VideoEffect.create(
+            type: EffectType.colorGrade,
+            parameters: parameters,
+          );
+          final updatedClips = currentTimeline.videoClips.map((clip) {
+            final existingIdx = clip.effects.indexWhere(
+                (e) => e.type == EffectType.colorGrade);
+            List<VideoEffect> newEffects;
+            if (existingIdx >= 0) {
+              newEffects = [...clip.effects];
+              newEffects[existingIdx] = effect;
+            } else {
+              newEffects = [...clip.effects, effect];
+            }
+            return clip.copyWith(effects: newEffects);
+          }).toList();
+          currentTimeline = currentTimeline.copyWith(videoClips: updatedClips);
+          break;
+          
+        case 'remove_background':
+          // تطبيق إزالة الخلفية على مقطع محدد أو الكل
+          final targetClipId = action['clipId'] as String?;
+          final effect = VideoEffect.create(
+            type: EffectType.backgroundRemoval,
+            parameters: action['parameters'] as Map<String, dynamic>? ?? {},
+          );
+          if (targetClipId != null) {
+            final idx = currentTimeline.videoClips
+                .indexWhere((c) => c.id == targetClipId);
+            if (idx >= 0) {
+              final clip = currentTimeline.videoClips[idx];
+              final newClips = [...currentTimeline.videoClips];
+              newClips[idx] = clip.copyWith(effects: [...clip.effects, effect]);
+              currentTimeline = currentTimeline.copyWith(videoClips: newClips);
+            }
+          }
+          break;
+          
+        case 'add_audio':
+          // إضافة مسار صوتي من الذكاء الاصطناعي
+          final audioPath = action['audioPath'] as String;
+          final startTime = (action['startTime'] as num).toDouble();
+          final duration = (action['duration'] as num).toDouble();
+          final newAudioClip = AudioClip.create(
+            filePath: audioPath,
+            startTime: startTime,
+            duration: duration,
+            audioType: AudioType.music,
+          );
+          currentTimeline = currentTimeline.copyWith(
+            audioClips: [...currentTimeline.audioClips, newAudioClip],
+          );
+          break;
+          
+        case 'apply_motion_tracking':
+          final clipId = action['clipId'] as String;
+          final effect = VideoEffect.create(
+            type: EffectType.motionTracking,
+            parameters: action['parameters'] as Map<String, dynamic>? ?? {},
+          );
+          final idx = currentTimeline.videoClips
+              .indexWhere((c) => c.id == clipId);
+          if (idx >= 0) {
+            final clip = currentTimeline.videoClips[idx];
+            final newClips = [...currentTimeline.videoClips];
+            newClips[idx] = clip.copyWith(effects: [...clip.effects, effect]);
+            currentTimeline = currentTimeline.copyWith(videoClips: newClips);
+          }
+          break;
+          
+        case 'add_text_caption':
+          final text = action['text'] as String;
+          final startTime = (action['startTime'] as num).toDouble();
+          final duration = (action['duration'] as num?)?.toDouble() ?? 3.0;
+          final textLayer = TextLayer.create(
+            text: text,
+            startTime: startTime,
+            duration: duration,
+          );
+          currentTimeline = currentTimeline.copyWith(
+            textLayers: [...currentTimeline.textLayers, textLayer],
+          );
+          break;
+      }
+    }
+    
+    // حفظ الحالة النهائية كخطوة واحدة في Undo
+    await _undoRedoService.pushState(currentTimeline);
+    final historyInfo = _undoRedoService.historyInfo;
+    emit(state.copyWith(
+      timelineState: currentTimeline,
+      canUndo: historyInfo.canUndo,
+      canRedo: historyInfo.canRedo,
+      status: EditorStatus.idle,
+    ));
+  }
+  // ====================================================
+  // تراجع (Undo)
+  // ====================================================
+  Future<void> undo() async {
+    final previousState = await _undoRedoService.undo();
+    if (previousState != null) {
+      final historyInfo = _undoRedoService.historyInfo;
+      emit(state.copyWith(
+        timelineState: previousState,
+        canUndo: historyInfo.canUndo,
+        canRedo: historyInfo.canRedo,
+      ));
+    }
+  }
+  // ====================================================
+  // إعادة (Redo)
+  // ====================================================
+  Future<void> redo() async {
+    final nextState = await _undoRedoService.redo();
+    if (nextState != null) {
+      final historyInfo = _undoRedoService.historyInfo;
+      emit(state.copyWith(
+        timelineState: nextState,
+        canUndo: historyInfo.canUndo,
+        canRedo: historyInfo.canRedo,
+      ));
+    }
+  }
+  // ====================================================
+  // تغيير موضع مؤشر التشغيل
+  // ====================================================
+  void seekTo(double position) {
+    final clampedPosition = position.clamp(
+        0.0, state.timelineState.totalDuration);
+    emit(state.copyWith(currentPlayheadPosition: clampedPosition));
+  }
+  // ====================================================
+  // تشغيل/إيقاف الفيديو
+  // ====================================================
+  void togglePlayPause() {
+    emit(state.copyWith(isPlaying: !state.isPlaying));
+  }
+  // ====================================================
+  // تغيير تكبير التايم لاين
+  // ====================================================
+  void setTimelineZoom(double zoom) {
+    final clampedZoom = zoom.clamp(0.1, 10.0);
+    emit(state.copyWith(timelineZoom: clampedZoom));
+  }
+  // ====================================================
+  // تحديد مقطع
+  // ====================================================
+  void selectClip(String? clipId) {
+    emit(state.copyWith(
+      selectedClipId: clipId,
+      clearSelectedClip: clipId == null,
+    ));
+  }
+  // ====================================================
+  // تغيير الأداة النشطة
+  // ====================================================
+  void setActiveTool(EditorTool tool) {
+    emit(state.copyWith(
+      activeTool: tool,
+      isAIPanelOpen: tool == EditorTool.aiCommands,
+      isAudioPanelOpen: tool == EditorTool.audio,
+      isTextPanelOpen: tool == EditorTool.text,
+    ));
+  }
+  // ====================================================
+  // دالة مساعدة لحساب المدة الإجمالية
+  // ====================================================
+  double _calculateTotalDuration(
+      List<VideoClip> videoClips, List<AudioClip> audioClips) {
+    double maxTime = 0;
+    for (final clip in videoClips) {
+      if (clip.endTime > maxTime) maxTime = clip.endTime;
+    }
+    for (final clip in audioClips) {
+      if (clip.endTime > maxTime) maxTime = clip.endTime;
+    }
+    return maxTime;
+  }
+  @override
+  Future<void> close() async {
+    await _undoRedoService.clearHistory();
+    return super.close();
+  }
+}
+```
+---
+### الخطوة 10: الثوابت العامة
+**المسار:** `lib/shared/constants/app_constants.dart`
+```dart
+// lib/shared/constants/app_constants.dart
+// ثوابت التطبيق المستخدمة في كل مكان
+class AppConstants {
+  AppConstants._();
+  // ====== حدود التجربة المجانية ======
+  static const int freeTrialDays = 3;
+  static const int freeExportLimit4K = 3;         // 3 تصديرات بـ 4K مجاناً
+  static const int freeExportLimit1080p = 10;      // 10 تصديرات بـ 1080p مجاناً
+  // ====== إعدادات التايم لاين ======
+  static const double defaultTimelineZoom = 1.0;
+  static const double minTimelineZoom = 0.1;
+  static const double maxTimelineZoom = 10.0;
+  static const double trackHeight = 60.0;         // ارتفاع كل مسار بالـ pixels
+  static const double audioTrackHeight = 48.0;
+  static const double timelineHeaderHeight = 30.0;
+  static const double pixelsPerSecond = 50.0;     // عند zoom=1.0
+  // ====== إعدادات Proxy ======
+  static const String proxyResolution = '360p';
+  static const int proxyBitrate = 800;            // kbps
+  static const int proxyCRF = 28;                 // جودة الضغط
+  // ====== حدود نظام Undo/Redo ======
+  static const int maxUndoSteps = 100;
+  // ====== روابط الـ API ======
+  static const String apiBaseUrl = 'https://api.cinematiceditor.com/v1';
+  static const String wsBaseUrl = 'wss://ws.cinematiceditor.com/v1';
+  // ====== مفاتيح التخزين المحلي ======
+  static const String deviceIdKey = 'device_unique_id';
+  static const String userTokenKey = 'user_auth_token';
+  static const String subscriptionKey = 'subscription_status';
+  static const String trialStartKey = 'trial_start_timestamp';
+  static const String exportCountKey = 'export_count_';
+  // ====== مسارات الملفات ======
+  static const String projectsFolder = 'projects';
+  static const String proxiesFolder = 'proxies';
+  static const String thumbnailsFolder = 'thumbnails';
+  static const String exportsFolder = 'exports';
+  static const String tempFolder = 'temp';
+}
+```
+---
+### الخطوة 11: الشاشة الرئيسية للمحرر
+الآن ننتقل لبناء الواجهة المرئية. هذه هي الشاشة الأهم في التطبيق.
+**المسار:** `lib/features/editor/presentation/screens/editor_screen.dart`
+```dart
+// lib/features/editor/presentation/screens/editor_screen.dart
+// هذه هي الشاشة الرئيسية للمحرر
+// تجمع كل المكونات معاً في تخطيط عمودي احترافي
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../cubit/editor_cubit.dart';
+import '../widgets/toolbar/top_toolbar_widget.dart';
+import '../widgets/preview/preview_player_widget.dart';
+import '../widgets/timeline/timeline_widget.dart';
+import '../widgets/toolbar/bottom_toolbar_widget.dart';
+import '../widgets/panels/ai_commands_panel.dart';
+import '../widgets/panels/audio_panel.dart';
+import '../widgets/panels/text_panel.dart';
+import '../../../../shared/theme/app_colors.dart';
+class EditorScreen extends StatefulWidget {
+  final String projectId;
+  const EditorScreen({
+    super.key,
+    required this.projectId,
+  });
+  @override
+  State<EditorScreen> createState() => _EditorScreenState();
+}
+class _EditorScreenState extends State<EditorScreen>
+    with TickerProviderStateMixin {
+  
+  // متحكم الرسوم المتحركة للوحات التحكم الجانبية
+  late AnimationController _panelAnimationController;
+  late Animation<double> _panelSlideAnimation;
+  late Animation<double> _panelFadeAnimation;
+  @override
+  void initState() {
+    super.initState();
+    
+    // إخفاء شريط الحالة للحصول على شاشة كاملة
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    
+    // تهيئة الرسوم المتحركة للوحات
+    _panelAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    );
+    
+    _panelSlideAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(
+        parent: _panelAnimationController,
+        curve: Curves.easeOutCubic,
+      ),
+    );
+    
+    _panelFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _panelAnimationController,
+        curve: Curves.easeOut,
+      ),
+    );
+  }
+  @override
+  void dispose() {
+    _panelAnimationController.dispose();
+    // إعادة شريط الحالة عند الخروج
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    super.dispose();
+  }
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => EditorCubit(projectId: widget.projectId),
+      child: BlocListener<EditorCubit, EditorState>(
+        // نستمع للتغييرات لفتح/إغلاق اللوحات
+        listenWhen: (previous, current) =>
+            previous.isAIPanelOpen != current.isAIPanelOpen ||
+            previous.isAudioPanelOpen != current.isAudioPanelOpen ||
+            previous.isTextPanelOpen != current.isTextPanelOpen,
+        listener: (context, state) {
+          // إذا فُتحت أي لوحة، شغّل الأنيميشن
+          if (state.isAIPanelOpen || state.isAudioPanelOpen || state.isTextPanelOpen) {
+            _panelAnimationController.forward();
+          } else {
+            _panelAnimationController.reverse();
+          }
+        },
+        child: Scaffold(
+          backgroundColor: AppColors.backgroundPrimary,
+          body: BlocBuilder<EditorCubit, EditorState>(
+            builder: (context, state) {
+              return Stack(
+                children: [
+                  // ====== التخطيط الرئيسي (Column) ======
+                  Column(
+                    children: [
+                      // 1. الشريط العلوي
+                      const TopToolbarWidget(),
+                      
+                      // 2. منطقة عرض الفيديو
+                      Expanded(
+                        flex: 5,
+                        child: PreviewPlayerWidget(
+                          timelineState: state.timelineState,
+                          currentPosition: state.currentPlayheadPosition,
+                          isPlaying: state.isPlaying,
+                        ),
+                      ),
+                      
+                      // 3. التايم لاين
+                      Expanded(
+                        flex: 4,
+                        child: TimelineWidget(
+                          timelineState: state.timelineState,
+                          currentPosition: state.currentPlayheadPosition,
+                          zoom: state.timelineZoom,
+                          selectedClipId: state.selectedClipId,
+                        ),
+                      ),
+                      
+                      // 4. شريط الأدوات السفلي
+                      const BottomToolbarWidget(),
+                    ],
+                  ),
+                  
+                  // ====== طبقة اللوحات المنزلقة من الأسفل ======
+                  // تُعرض فوق التخطيط الرئيسي عند الحاجة
+                  if (state.isAIPanelOpen || state.isAudioPanelOpen || state.isTextPanelOpen)
+                    _buildOverlayPanel(state),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+  // بناء اللوحة المنزلقة من الأسفل
+  Widget _buildOverlayPanel(EditorState state) {
+    return AnimatedBuilder(
+      animation: _panelAnimationController,
+      builder: (context, child) {
+        return Stack(
+          children: [
+            // طبقة تعتيم الخلفية (Backdrop)
+            GestureDetector(
+              onTap: () {
+                context.read<EditorCubit>().setActiveTool(EditorTool.select);
+              },
+              child: Container(
+                color: Colors.black.withOpacity(0.6 * _panelFadeAnimation.value),
+              ),
+            ),
+            
+            // اللوحة نفسها تنزلق من الأسفل
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Transform.translate(
+                offset: Offset(
+                  0,
+                  MediaQuery.of(context).size.height *
+                      0.6 *
+                      _panelSlideAnimation.value,
+                ),
+                child: Opacity(
+                  opacity: _panelFadeAnimation.value,
+                  child: child,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+      child: _buildActivePanel(state),
+    );
+  }
+  // تحديد اللوحة التي تُعرض
+  Widget _buildActivePanel(EditorState state) {
+    if (state.isAIPanelOpen) {
+      return const AiCommandsPanel();
+    } else if (state.isAudioPanelOpen) {
+      return const AudioPanel();
+    } else if (state.isTextPanelOpen) {
+      return const TextPanel();
+    }
+    return const SizedBox.shrink();
+  }
+}
+```
+---
+### الخطوة 12: الشريط العلوي (Top Toolbar)
+**المسار:** `lib/features/editor/presentation/widgets/toolbar/top_toolbar_widget.dart`
+```dart
+// lib/features/editor/presentation/widgets/toolbar/top_toolbar_widget.dart
+// الشريط العلوي يحتوي على أزرار: تصدير، Undo، Redo، حفظ، وعنوان المشروع
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../cubit/editor_cubit.dart';
+import '../../../../../shared/theme/app_colors.dart';
+class TopToolbarWidget extends StatelessWidget {
+  const TopToolbarWidget({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<EditorCubit, EditorState>(
+      builder: (context, state) {
+        return Container(
+          height: 56 + MediaQuery.of(context).padding.top,
+          padding: EdgeInsets.only(
+            top: MediaQuery.of(context).padding.top,
+            left: 12,
+            right: 12,
+          ),
+          decoration: const BoxDecoration(
+            color: AppColors.backgroundSecondary,
+            border: Border(
+              bottom: BorderSide(
+                color: AppColors.backgroundElevated,
+                width: 1,
+              ),
+            ),
+          ),
+          child: Row(
+            children: [
+              // ====== زر الرجوع ======
+              _buildIconButton(
+                context,
+                icon: Icons.arrow_back_ios_new_rounded,
+                tooltip: 'رجوع',
+                onTap: () => Navigator.of(context).pop(),
+              ),
+              
+              const SizedBox(width: 8),
+              
+              // ====== عنوان المشروع ======
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => _showRenameDialog(context),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'مشروع بدون عنوان',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        _formatDuration(state.timelineState.totalDuration),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.textTertiary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              
+              // ====== أزرار التحكم اليمينية ======
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // زر Undo
+                  _buildIconButton(
+                    context,
+                    icon: Icons.undo_rounded,
+                    tooltip: 'تراجع',
+                    isEnabled: state.canUndo,
+                    onTap: state.canUndo
+                        ? () => context.read<EditorCubit>().undo()
+                        : null,
+                  ),
+                  
+                  const SizedBox(width: 4),
+                  
+                  // زر Redo
+                  _buildIconButton(
+                    context,
+                    icon: Icons.redo_rounded,
+                    tooltip: 'إعادة',
+                    isEnabled: state.canRedo,
+                    onTap: state.canRedo
+                        ? () => context.read<EditorCubit>().redo()
+                        : null,
+                  ),
+                  
+                  const SizedBox(width: 4),
+                  
+                  // زر حفظ
+                  _buildIconButton(
+                    context,
+                    icon: Icons.save_outlined,
+                    tooltip: 'حفظ',
+                    onTap: () => _handleSave(context),
+                  ),
+                  
+                  const SizedBox(width: 8),
+                  
+                  // ====== زر التصدير (الأهم) ======
+                  _buildExportButton(context, state),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+  // بناء أزرار الأيقونات المستطيلة
+  Widget _buildIconButton(
+    BuildContext context, {
+    required IconData icon,
+    required String tooltip,
+    VoidCallback? onTap,
+    bool isEnabled = true,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: isEnabled
+                ? AppColors.backgroundElevated
+                : AppColors.backgroundTertiary,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(
+            icon,
+            color: isEnabled ? AppColors.textPrimary : AppColors.textDisabled,
+            size: 18,
+          ),
+        ),
+      ),
+    );
+  }
+  // بناء زر التصدير المميز
+  Widget _buildExportButton(BuildContext context, EditorState state) {
+    if (state.isExporting) {
+      // عرض شريط التقدم أثناء التصدير
+      return Container(
+        width: 90,
+        height: 36,
+        decoration: BoxDecoration(
+          color: AppColors.backgroundElevated,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Stack(
+          children: [
+            // خلفية شريط التقدم
+            FractionallySizedBox(
+              widthFactor: state.exportProgress,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: AppColors.aiButtonGradient,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+            // نص النسبة المئوية
+            Center(
+              child: Text(
+                '${(state.exportProgress * 100).toInt()}%',
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    return GestureDetector(
+      onTap: () => _handleExport(context),
+      child: Container(
+        height: 36,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          gradient: AppColors.aiButtonGradient,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: AppColors.accentGlow,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.file_upload_outlined,
+              color: AppColors.textPrimary,
+              size: 16,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              'تصدير',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  // تنسيق المدة الزمنية
+  String _formatDuration(double seconds) {
+    final int totalSeconds = seconds.toInt();
+    final int minutes = totalSeconds ~/ 60;
+    final int secs = totalSeconds % 60;
+    final int millis = ((seconds - totalSeconds) * 100).toInt();
+    return '${minutes.toString().padLeft(2, '0')}:'
+        '${secs.toString().padLeft(2, '0')}.'
+        '${millis.toString().padLeft(2, '0')}';
+  }
+  // حوار تسمية المشروع
+  void _showRenameDialog(BuildContext context) {
+    final controller = TextEditingController(text: 'مشروع بدون عنوان');
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.backgroundSecondary,
+        title: const Text(
+          'تسمية المشروع',
+          style: TextStyle(color: AppColors.textPrimary),
+        ),
+        content: TextField(
+          controller: controller,
+          style: const TextStyle(color: AppColors.textPrimary),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: AppColors.backgroundTertiary,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide.none,
+            ),
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('إلغاء', style: TextStyle(color: AppColors.textTertiary)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('حفظ'),
+          ),
+        ],
+      ),
+    );
+  }
+  void _handleSave(BuildContext context) {
+    // سيتم تنفيذ الحفظ الكامل لاحقاً
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('تم الحفظ بنجاح'),
+        backgroundColor: AppColors.accentSuccess,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+  void _handleExport(BuildContext context) {
+    // فتح شاشة التصدير
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.backgroundSecondary,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => _ExportOptionsSheet(),
+    );
+  }
+}
+// ====================================================
+// ورقة خيارات التصدير السفلية
+// ====================================================
+class _ExportOptionsSheet extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // مقبض الورقة
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.textDisabled,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'خيارات التصدير',
+            style: Theme.of(context).textTheme.headlineMedium,
+          ),
+          const SizedBox(height: 16),
+          // خيارات الجودة
+          _buildExportOption(
+            context,
+            title: '4K Ultra HD',
+            subtitle: '3840×2160 · مناسب للمحترفين',
+            icon: Icons.hd,
+            isPremium: true,
+            onTap: () {},
+          ),
+          const SizedBox(height: 8),
+          _buildExportOption(
+            context,
+            title: '1080p Full HD',
+            subtitle: '1920×1080 · الأفضل للمشاركة',
+            icon: Icons.high_quality,
+            isPremium: false,
+            onTap: () {},
+          ),
+          const SizedBox(height: 8),
+          _buildExportOption(
+            context,
+            title: '720p HD',
+            subtitle: '1280×720 · حجم ملف أصغر',
+            icon: Icons.sd,
+            isPremium: false,
+            onTap: () {},
+          ),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+  Widget _buildExportOption(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required bool isPremium,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.backgroundTertiary,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: AppColors.backgroundElevated,
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppColors.accentPrimary.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: AppColors.accentPrimary, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        title,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      if (isPremium) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            gradient: AppColors.aiButtonGradient,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            'Premium',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  Text(
+                    subtitle,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: AppColors.textTertiary,
+              size: 16,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+```
+---
+### الخطوة 13: مشغل الفيديو (Preview Player)
+**المسار:** `lib/features/editor/presentation/widgets/preview/preview_player_widget.dart`
+```dart
+// lib/features/editor/presentation/widgets/preview/preview_player_widget.dart
+// منطقة عرض الفيديو مع أزرار التحكم
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:video_player/video_player.dart';
+import '../../cubit/editor_cubit.dart';
+import '../../../../../core/models/timeline_models.dart';
+import '../../../../../shared/theme/app_colors.dart';
+class PreviewPlayerWidget extends StatefulWidget {
+  final TimelineState timelineState;
+  final double currentPosition;
+  final bool isPlaying;
+  const PreviewPlayerWidget({
+    super.key,
+    required this.timelineState,
+    required this.currentPosition,
+    required this.isPlaying,
+  });
+  @override
+  State<PreviewPlayerWidget> createState() => _PreviewPlayerWidgetState();
+}
+class _PreviewPlayerWidgetState extends State<PreviewPlayerWidget> {
+  VideoPlayerController? _videoController;
+  bool _isControlsVisible = true;
+  // مؤقت لإخفاء أدوات التحكم تلقائياً
+  Future<void> _hideControlsAfterDelay() async {
+    await Future.delayed(const Duration(seconds: 3));
+    if (mounted && widget.isPlaying) {
+      setState(() => _isControlsVisible = false);
+    }
+  }
+  @override
+  void didUpdateWidget(PreviewPlayerWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // إذا تغيرت حالة التشغيل
+    if (oldWidget.isPlaying != widget.isPlaying) {
+      if (widget.isPlaying) {
+        _videoController?.play();
+        _hideControlsAfterDelay();
+      } else {
+        _videoController?.pause();
+        setState(() => _isControlsVisible = true);
+      }
+    }
+  }
+  @override
+  void dispose() {
+    _videoController?.dispose();
+    super.dispose();
+  }
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        setState(() => _isControlsVisible = !_isControlsVisible);
+        if (_isControlsVisible && widget.isPlaying) {
+          _hideControlsAfterDelay();
+        }
+      },
+      child: Container(
+        color: Colors.black,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // ====== عرض الفيديو ======
+            _buildVideoDisplay(),
+            // ====== تدرج الإضاءة السفلي ======
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: const BoxDecoration(
+                  gradient: AppColors.previewOverlayGradient,
+                ),
+              ),
+            ),
+            // ====== أدوات التحكم ======
+            AnimatedOpacity(
+              opacity: _isControlsVisible ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 200),
+              child: _buildControls(context),
+            ),
+            // ====== مؤشر الوقت الحالي ======
+            Positioned(
+              bottom: 12,
+              left: 16,
+              child: _buildTimeDisplay(),
+            ),
+            // ====== أزرار إضافية يمين ======
+            Positioned(
+              bottom: 8,
+              right: 12,
+              child: _buildRightActions(context),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  // عرض الفيديو أو شاشة الانتظار
+  Widget _buildVideoDisplay() {
+    if (widget.timelineState.videoClips.isEmpty) {
+      // شاشة انتظار عند عدم وجود مقاطع
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.video_library_outlined,
+              size: 64,
+              color: AppColors.textDisabled,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'اضغط على + لإضافة مقطع',
+              style: TextStyle(
+                color: AppColors.textDisabled,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    // عرض الفيديو المحدد حالياً
+    if (_videoController != null && _videoController!.value.isInitialized) {
+      return Center(
+        child: AspectRatio(
+          aspectRatio: _videoController!.value.aspectRatio,
+          child: VideoPlayer(_videoController!),
+        ),
+      );
+    }
+    return const Center(
+      child: CircularProgressIndicator(
+        color: AppColors.accentPrimary,
+        strokeWidth: 2,
+      ),
+    );
+  }
+  // بناء أدوات التحكم في التشغيل
+  Widget _buildControls(BuildContext context) {
+    return Positioned.fill(
+      child: Center(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // زر الرجوع 5 ثواني
+            _buildControlButton(
+              icon: Icons.replay_5_rounded,
+              size: 36,
+              onTap: () {
+                final newPos = (widget.currentPosition - 5).clamp(
+                    0.0, widget.timelineState.totalDuration);
+                context.read<EditorCubit>().seekTo(newPos);
+              },
+            ),
+            const SizedBox(width: 24),
+            // زر التشغيل/الإيقاف الرئيسي
+            GestureDetector(
+              onTap: () => context.read<EditorCubit>().togglePlayPause(),
+              child: Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.3),
+                    width: 1.5,
+                  ),
+                ),
+                child: Icon(
+                  widget.isPlaying
+                      ? Icons.pause_rounded
+                      : Icons.play_arrow_rounded,
+                  color: Colors.white,
+                  size: 36,
+                ),
+              ),
+            ),
+            const SizedBox(width: 24),
+            // زر التقدم 5 ثواني
+            _buildControlButton(
+              icon: Icons.forward_5_rounded,
+              size: 36,
+              onTap: () {
+                final newPos = (widget.currentPosition + 5).clamp(
+                    0.0, widget.timelineState.totalDuration);
+                context.read<EditorCubit>().seekTo(newPos);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  Widget _buildControlButton({
+    required IconData icon,
+    required double size,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.1),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: Colors.white, size: size * 0.6),
+      ),
+    );
+  }
+  // عرض الوقت الحالي
+  Widget _buildTimeDisplay() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.6),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        '${_formatTime(widget.currentPosition)} / '
+        '${_formatTime(widget.timelineState.totalDuration)}',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 12,
+          fontFamily: 'monospace',
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+  // أزرار إضافية على اليمين
+  Widget _buildRightActions(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildSmallActionButton(
+          icon: Icons.fit_screen_rounded,
+          tooltip: 'ملء الشاشة',
+          onTap: () {},
+        ),
+        const SizedBox(height: 8),
+        _buildSmallActionButton(
+          icon: Icons.screenshot_monitor_rounded,
+          tooltip: 'لقطة شاشة',
+          onTap: () {},
+        ),
+      ],
+    );
+  }
+  Widget _buildSmallActionButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: Colors.white, size: 18),
+        ),
+      ),
+    );
+  }
+  String _formatTime(double seconds) {
+    final int totalSeconds = seconds.toInt();
+    final int minutes = totalSeconds ~/ 60;
+    final int secs = totalSeconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:'
+        '${secs.toString().padLeft(2, '0')}';
+  }
+}
+```
+---
+### الخطوة 14: التايم لاين الاحترافي
+**المسار:** `lib/features/editor/presentation/widgets/timeline/timeline_widget.dart`
+```dart
+// lib/features/editor/presentation/widgets/timeline/timeline_widget.dart
+// التايم لاين الرئيسي مع مسارات الفيديو والصوت والنص
+import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../cubit/editor_cubit.dart';
+import '../../../../../core/models/timeline_models.dart';
+import '../../../../../shared/theme/app_colors.dart';
+import '../../../../../shared/constants/app_constants.dart';
+import 'timeline_ruler_widget.dart';
+import 'timeline_track_widget.dart';
+import 'timeline_playhead_widget.dart';
+import 'timeline_clip_widget.dart';
+class TimelineWidget extends StatefulWidget {
+  final TimelineState timelineState;
+  final double currentPosition;
+  final double zoom;
+  final String? selectedClipId;
+  const TimelineWidget({
+    super.key,
+    required this.timelineState,
+    required this.currentPosition,
+    required this.zoom,
+    this.selectedClipId,
+  });
+  @override
+  State<TimelineWidget> createState() => _TimelineWidgetState();
+}
+class _TimelineWidgetState extends State<TimelineWidget> {
+  final ScrollController _horizontalScrollController = ScrollController();
+  final ScrollController _verticalScrollController = ScrollController();
+  // حساب عرض البكسل لكل ثانية بناءً على مستوى التكبير
+  double get pixelsPerSecond =>
+      AppConstants.pixelsPerSecond * widget.zoom;
+  // إجمالي عرض التايم لاين
+  double get totalWidth =>
+      (widget.timelineState.totalDuration + 30) * pixelsPerSecond;
+  @override
+  void dispose() {
+    _horizontalScrollController.dispose();
+    _verticalScrollController.dispose();
+    super.dispose();
+  }
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppColors.timelineBackground,
+      child: Column(
+        children: [
+          // ====== شريط أدوات التايم لاين ======
+          _buildTimelineToolbar(context),
+          // ====== منطقة التايم لاين الرئيسية ======
+          Expanded(
+            child: Row(
+              children: [
+                // ====== لوحة المسارات (أسماء المسارات على اليسار) ======
+                _buildTrackLabelsPanel(),
+                // ====== منطقة التمرير الرئيسية ======
+                Expanded(
+                  child: _buildScrollableTimeline(),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  // شريط أدوات التايم لاين
+  Widget _buildTimelineToolbar(BuildContext context) {
+    return Container(
+      height: 36,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: const BoxDecoration(
+        color: AppColors.backgroundSecondary,
+        border: Border(
+          bottom: BorderSide(color: AppColors.backgroundElevated, width: 1),
+        ),
+      ),
+      child: Row(
+        children: [
+          // زر إضافة مقطع
+          _buildTimelineToolButton(
+            icon: Icons.add_rounded,
+            label: 'إضافة',
+            onTap: () => _showAddMediaDialog(context),
+          ),
+          const SizedBox(width: 8),
+          // زر القص
+          _buildTimelineToolButton(
+            icon: Icons.content_cut_rounded,
+            label: 'قص',
+            onTap: () => _splitAtPlayhead(context),
+          ),
+          const SizedBox(width: 8),
+          // زر الحذف
+          _buildTimelineToolButton(
+            icon: Icons.delete_outline_rounded,
+            label: 'حذف',
+            onTap: widget.selectedClipId != null
+                ? () => context.read<EditorCubit>()
+                    .deleteVideoClip(widget.selectedClipId!)
+                : null,
+          ),
+          const Spacer(),
+          // تحكم في التكبير
+          Row(
+            children: [
+              GestureDetector(
+                onTap: () {
+                  context.read<EditorCubit>().setTimelineZoom(
+                      (widget.zoom - 0.25).clamp(
+                          AppConstants.minTimelineZoom,
+                          AppConstants.maxTimelineZoom));
+                },
+                child: const Icon(
+                  Icons.remove_circle_outline,
+                  color: AppColors.textTertiary,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                '${(widget.zoom * 100).toInt()}%',
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 11,
+                  fontFamily: 'monospace',
+                ),
+              ),
+              const SizedBox(width: 4),
+              GestureDetector(
+                onTap: () {
+                  context.read<EditorCubit>().setTimelineZoom(
+                      (widget.zoom + 0.25).clamp(
+                          AppConstants.minTimelineZoom,
+                          AppConstants.maxTimelineZoom));
+                },
+                child: const Icon(
+                  Icons.add_circle_outline,
+                  color: AppColors.textTertiary,
+                  size: 18,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+  // لوحة أسماء المسارات على اليسار
+  Widget _buildTrackLabelsPanel() {
+    return Container(
+      width: 56,
+      decoration: const BoxDecoration(
+        color: AppColors.backgroundSecondary,
+        border: Border(
+          right: BorderSide(color: AppColors.backgroundElevated, width: 1),
+        ),
+      ),
+      child: Column(
+        children: [
+          // مساحة شريط القياس
+          const SizedBox(height: AppConstants.timelineHeaderHeight),
+          // مسارات الفيديو
+          ...List.generate(
+            widget.timelineState.videoTrackCount,
+            (index) => _buildTrackLabel(
+              icon: Icons.videocam_outlined,
+              color: AppColors.timelineTrackVideo,
+              index: index,
+              height: AppConstants.trackHeight,
+            ),
+          ),
+          // مسارات الصوت
+          ...List.generate(
+            widget.timelineState.audioTrackCount,
+            (index) => _buildTrackLabel(
+              icon: Icons.music_note_outlined,
+              color: AppColors.timelineTrackAudio,
+              index: index,
+              height: AppConstants.audioTrackHeight,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  Widget _buildTrackLabel({
+    required IconData icon,
+    required Color color,
+    required int index,
+    required double height,
+  }) {
+    return Container(
+      height: height,
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: AppColors.backgroundElevated,
+            width: 0.5,
+          ),
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 14, color: color.withOpacity(0.8)),
+          const SizedBox(height: 2),
+          Text(
+            '${index + 1}',
+            style: TextStyle(
+              color: color.withOpacity(0.6),
+              fontSize: 9,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  // منطقة التمرير الرئيسية
+  Widget _buildScrollableTimeline() {
+    return Listener(
+      // دعم Pinch to Zoom على الشاشة
+      onPointerSignal: (signal) {
+        if (signal is PointerScrollEvent) {
+          if (signal.kind == PointerDeviceKind.mouse) {
+            // التمرير العادي مع عجلة الماوس
+            _horizontalScrollController.animateTo(
+              (_horizontalScrollController.offset + signal.scrollDelta.dy * 2)
+                  .clamp(0, _horizontalScrollController.position.maxScrollExtent),
+              duration: const Duration(milliseconds: 100),
+              curve: Curves.linear,
+            );
+          }
+        }
+      },
+      child: SingleChildScrollView(
+        controller: _verticalScrollController,
+        child: SizedBox(
+          width: double.infinity,
+          child: SingleChildScrollView(
+            controller: _horizontalScrollController,
+            scrollDirection: Axis.horizontal,
+            child: SizedBox(
+              width: totalWidth,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ====== شريط القياس الزمني ======
+                  TimelineRulerWidget(
+                    totalDuration: widget.timelineState.totalDuration + 30,
+                    pixelsPerSecond: pixelsPerSecond,
+                    currentPosition: widget.currentPosition,
+                  ),
+                  // ====== مسارات الفيديو ======
+                  ...List.generate(
+                    widget.timelineState.videoTrackCount,
+                    (trackIndex) => _buildVideoTrack(trackIndex),
+                  ),
+                  // ====== فاصل بين الفيديو والصوت ======
+                  Container(
+                    height: 2,
+                    color: AppColors.backgroundElevated,
+                    margin: const EdgeInsets.symmetric(vertical: 2),
+                  ),
+                  // ====== مسارات الصوت ======
+                  ...List.generate(
+                    widget.timelineState.audioTrackCount,
+                    (trackIndex) => _buildAudioTrack(trackIndex),
+                  ),
+                  // ====== مسار النصوص ======
+                  _buildTextTrack(),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+  // بناء مسار فيديو
+  Widget _buildVideoTrack(int trackIndex) {
+    final clipsOnTrack = widget.timelineState.videoClips
+        .where((clip) => clip.trackIndex == trackIndex)
+        .toList();
+    return GestureDetector(
+      onTapDown: (details) {
+        // النقر على منطقة فارغة يرفع التحديد
+        context.read<EditorCubit>().selectClip(null);
+        // تحريك مؤشر التشغيل
+        final tappedPosition = details.localPosition.dx / pixelsPerSecond;
+        context.read<EditorCubit>().seekTo(tappedPosition);
+      },
+      child: Stack(
+        children: [
+          // خلفية المسار
+          Container(
+            height: AppConstants.trackHeight,
+            decoration: BoxDecoration(
+              color: AppColors.timelineTrackVideo.withOpacity(0.1),
+              border: const Border(
+                bottom: BorderSide(
+                  color: AppColors.backgroundElevated,
+                  width: 0.5,
+                ),
+              ),
+            ),
+          ),
+          // المقاطع على هذا المسار
+          ...clipsOnTrack.map(
+            (clip) => Positioned(
+              left: clip.startTime * pixelsPerSecond,
+              top: 4,
+              child: TimelineClipWidget(
+                clip: clip,
+                pixelsPerSecond: pixelsPerSecond,
+                trackHeight: AppConstants.trackHeight - 8,
+                isSelected: widget.selectedClipId == clip.id,
+                onTap: () =>
+                    context.read<EditorCubit>().selectClip(clip.id),
+                onDragEnd: (newStartTime) {
+                  context.read<EditorCubit>().moveVideoClip(
+                    clipId: clip.id,
+                    newStartTime: newStartTime,
+                    newTrackIndex: trackIndex,
+                  );
+                },
+                onTrimLeft: (newOffset) {
+                  context.read<EditorCubit>().trimVideoClip(
+                    clipId: clip.id,
+                    newStartTime: clip.startTime +
+                        (newOffset - clip.clipStartOffset),
+                    newClipStartOffset: newOffset,
+                  );
+                },
+                onTrimRight: (newOffset) {
+                  context.read<EditorCubit>().trimVideoClip(
+                    clipId: clip.id,
+                    newEndTime: clip.startTime +
+                        (newOffset - clip.clipStartOffset),
+                    newClipEndOffset: newOffset,
+                  );
+                },
+              ),
+            ),
+          ),
+          // مؤشر التشغيل (Playhead) - يظهر فوق المسارات
+          TimelinePlayheadWidget(
+            position: widget.currentPosition * pixelsPerSecond,
+            trackHeight: AppConstants.trackHeight,
+          ),
+        ],
+      ),
+    );
+  }
+  // بناء مسار صوت
+  Widget _buildAudioTrack(int trackIndex) {
+    final clipsOnTrack = widget.timelineState.audioClips
+        .where((clip) => clip.trackIndex == (trackIndex + 10))
+        .toList();
+    return Stack(
+      children: [
+        Container(
+          height: AppConstants.audioTrackHeight,
+          decoration: BoxDecoration(
+            color: AppColors.timelineTrackAudio.withOpacity(0.08),
+            border: const Border(
+              bottom: BorderSide(
+                color: AppColors.backgroundElevated,
+                width: 0.5,
+              ),
+            ),
+          ),
+        ),
+        ...clipsOnTrack.map(
+          (clip) => Positioned(
+            left: clip.startTime * pixelsPerSecond,
+            top: 4,
+            child: _buildAudioClipWidget(clip),
+          ),
+        ),
+      ],
+    );
+  }
+  // بناء مقطع صوتي
+  Widget _buildAudioClipWidget(AudioClip clip) {
+    final width = clip.duration * pixelsPerSecond;
+    return GestureDetector(
+      onTap: () {
+        // تحديد مقطع الصوت
+      },
+      child: Container(
+        width: width,
+        height: AppConstants.audioTrackHeight - 8,
+        decoration: BoxDecoration(
+          color: AppColors.timelineTrackAudio.withOpacity(0.7),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: AppColors.accentSuccess.withOpacity(0.5),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            const SizedBox(width: 6),
+            const Icon(Icons.music_note, size: 12, color: Colors.white70),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                clip.filePath.split('/').last,
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 10,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  // مسار النصوص
+  Widget _buildTextTrack() {
+    return Stack(
+      children: [
+        Container(
+          height: AppConstants.audioTrackHeight,
+          decoration: BoxDecoration(
+            color: AppColors.timelineTrackText.withOpacity(0.08),
+            border: const Border(
+              bottom: BorderSide(
+                color: AppColors.backgroundElevated,
+                width: 0.5,
+              ),
+            ),
+          ),
+        ),
+        ...widget.timelineState.textLayers.map(
+          (layer) => Positioned(
+            left: layer.startTime * pixelsPerSecond,
+            top: 4,
+            child: Container(
+              width: layer.duration * pixelsPerSecond,
+              height: AppConstants.audioTrackHeight - 8,
+              decoration: BoxDecoration(
+                color: AppColors.timelineTrackText.withOpacity(0.7),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: AppColors.accentWarning.withOpacity(0.5),
+                  width: 1,
+                ),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: Center(
+                child: Text(
+                  layer.text,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 10,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+  // تقسيم المقطع عند موضع مؤشر التشغيل
+  void _splitAtPlayhead(BuildContext context) {
+    if (widget.selectedClipId == null) return;
+    final playheadPosition = widget.currentPosition;
+    
+    final clipIndex = widget.timelineState.videoClips
+        .indexWhere((c) => c.id == widget.selectedClipId);
+    if (clipIndex == -1) return;
+    final clip = widget.timelineState.videoClips[clipIndex];
+    
+    // تأكد أن مؤشر التشغيل داخل المقطع
+    if (playheadPosition <= clip.startTime ||
+        playheadPosition >= clip.endTime) return;
+    // الوقت النسبي داخل الملف الأصلي
+    final relativeTime = playheadPosition - clip.startTime;
+    final splitContentTime = clip.clipStartOffset + relativeTime;
+    // المقطع الأول (من البداية حتى مؤشر التشغيل)
+    final firstClip = clip.copyWith(
+      endTime: playheadPosition,
+      clipEndOffset: splitContentTime,
+    );
+    // المقطع الثاني (من مؤشر التشغيل حتى النهاية)
+    final secondClip = clip.copyWith(
+      id: null, // سيُنشأ ID جديد
+      startTime: playheadPosition,
+      clipStartOffset: splitContentTime,
+    );
+    // تطبيق التقسيم على الـ Cubit
+    // (سيتم تنفيذ هذا عبر إضافة دالة splitClip في الـ Cubit)
+  }
+  Widget _buildTimelineToolButton({
+    required IconData icon,
+    required String label,
+    VoidCallback? onTap,
+  }) {
+    final isEnabled = onTap != null;
+    return GestureDetector(
+      onTap: onTap,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 16,
+            color: isEnabled ? AppColors.textSecondary : AppColors.textDisabled,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: isEnabled ? AppColors.textSecondary : AppColors.textDisabled,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  void _showAddMediaDialog(BuildContext context) {
+    // سيفتح اختيار الملفات
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.backgroundSecondary,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => _AddMediaSheet(
+        onVideoAdded: (path) {
+          // إضافة المقطع للتايم لاين
+          final clip = VideoClip.create(
+            originalPath: path,
+            proxyPath: path, // سيتم إنشاء الـ Proxy لاحقاً
+            startTime: widget.timelineState.totalDuration,
+            duration: 10.0,
+          );
+          context.read<EditorCubit>().addVideoClip(clip);
+        },
+      ),
+    );
+  }
+}
+// ====================================================
+// ورقة إضافة الوسائط
+// ====================================================
+class _AddMediaSheet extends StatelessWidget {
+  final Function(String path) onVideoAdded;
+  const _AddMediaSheet({required this.onVideoAdded});
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Center(
+            child: Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.textDisabled,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text('إضافة وسائط',
+              style: Theme.of(context).textTheme.headlineMedium),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildMediaOption(
+                  context,
+                  icon: Icons.video_library_outlined,
+                  label: 'فيديو',
+                  color: AppColors.timelineTrackVideo,
+                  onTap: () {
+                    Navigator.pop(context);
+                    // فتح مكتبة الفيديو
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildMediaOption(
+                  context,
+                  icon: Icons.image_outlined,
+                  label: 'صورة',
+                  color: AppColors.accentWarning,
+                  onTap: () => Navigator.pop(context),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildMediaOption(
+                  context,
+                  icon: Icons.music_note_outlined,
+                  label: 'صوت',
+                  color: AppColors.timelineTrackAudio,
+                  onTap: () => Navigator.pop(context),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+  Widget _buildMediaOption(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.3), width: 1),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 28),
+            const SizedBox(height: 8),
+            Text(label, style: TextStyle(color: color, fontSize: 13)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+```
+---
+### الخطوة 15: شريط الأدوات السفلي مع زر AI المتوهج
+**المسار:** `lib/features/editor/presentation/widgets/toolbar/bottom_toolbar_widget.dart`
+```dart
+// lib/features/editor/presentation/widgets/toolbar/bottom_toolbar_widget.dart
+// شريط الأدوات السفلي: زر AI المتوهج في المنتصف + الأدوات الأخرى
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import '../../cubit/editor_cubit.dart';
+import '../../../../../shared/theme/app_colors.dart';
+class BottomToolbarWidget extends StatefulWidget {
+  const BottomToolbarWidget({super.key});
+  @override
+  State<BottomToolbarWidget> createState() => _BottomToolbarWidgetState();
+}
+class _BottomToolbarWidgetState extends State<BottomToolbarWidget>
+    with SingleTickerProviderStateMixin {
+  // متحكم الرسوم المتحركة لتوهج زر الذكاء الاصطناعي
+  late AnimationController _glowController;
+  late Animation<double> _glowAnimation;
+  @override
+  void initState() {
+    super.initState();
+    // رسوم متحركة متكررة لتوهج زر الذكاء الاصطناعي
+    _glowController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: true);
+    _glowAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _glowController,
+        curve: Curves.easeInOut,
+      ),
+    );
+  }
+  @override
+  void dispose() {
+    _glowController.dispose();
+    super.dispose();
+  }
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<EditorCubit, EditorState>(
+      builder: (context, state) {
+        return Container(
+          padding: EdgeInsets.only(
+            left: 12,
+            right: 12,
+            top: 12,
+            bottom: 12 + MediaQuery.of(context).padding.bottom,
+          ),
+          decoration: BoxDecoration(
+            gradient: AppColors.toolbarGradient,
+            border: const Border(
+              top: BorderSide(color: AppColors.backgroundElevated, width: 1),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // ====== الأداة: القص ======
+              _buildToolButton(
+                context: context,
+                icon: Icons.content_cut_rounded,
+                label: 'قص',
+                tool: EditorTool.cut,
+                activeTool: state.activeTool,
+              ),
+              // ====== الأداة: الصوت ======
+              _buildToolButton(
+                context: context,
+                icon: Icons.music_note_rounded,
+                label: 'صوت',
+                tool: EditorTool.audio,
+                activeTool: state.activeTool,
+              ),
+              // ====== زر الذكاء الاصطناعي المتوهج (المنتصف) ======
+              _buildAIButton(context, state),
+              // ====== الأداة: النصوص ======
+              _buildToolButton(
+                context: context,
+                icon: Icons.text_fields_rounded,
+                label: 'نصوص',
+                tool: EditorTool.text,
+                activeTool: state.activeTool,
+              ),
+              // ====== الأداة: القوالب ======
+              _buildToolButton(
+                context: context,
+                icon: Icons.auto_awesome_mosaic_outlined,
+                label: 'قوالب',
+                tool: EditorTool.templates,
+                activeTool: state.activeTool,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+  // بناء زر أداة عادي
+  Widget _buildToolButton({
+    required BuildContext context,
+    required IconData icon,
+    required String label,
+    required EditorTool tool,
+    required EditorTool activeTool,
+  }) {
+    final isActive = activeTool == tool;
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact(); // اهتزاز خفيف عند الضغط
+        context.read<EditorCubit>().setActiveTool(
+          isActive ? EditorTool.select : tool,
+        );
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive
+              ? AppColors.accentPrimary.withOpacity(0.15)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              child: Icon(
+                icon,
+                color: isActive ? AppColors.accentPrimary : AppColors.textTertiary,
+                size: 24,
+              ),
+            ),
+            const SizedBox(height: 4),
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 200),
+              style: TextStyle(
+                color: isActive ? AppColors.accentPrimary : AppColors.textTertiary,
+                fontSize: 10,
+                fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+              ),
+              child: Text(label),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  // بناء زر الذكاء الاصطناعي المتوهج
+  Widget _buildAIButton(BuildContext context, EditorState state) {
+    final isActive = state.activeTool == EditorTool.aiCommands;
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.mediumImpact();
+        context.read<EditorCubit>().setActiveTool(
+          isActive ? EditorTool.select : EditorTool.aiCommands,
+        );
+      },
+      child: AnimatedBuilder(
+        animation: _glowAnimation,
+        builder: (context, child) {
+          return Container(
+            width: 68,
+            height: 68,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                colors: [
+                  Color(0xFF9D4EDD),
+                  Color(0xFF6C63FF),
+                  Color(0xFF00D4FF),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF9D4EDD)
+                      .withOpacity(0.5 * _glowAnimation.value),
+                  blurRadius: 20 * _glowAnimation.value,
+                  spreadRadius: 2 * _glowAnimation.value,
+                ),
+                BoxShadow(
+                  color: const Color(0xFF6C63FF)
+                      .withOpacity(0.3 * _glowAnimation.value),
+                  blurRadius: 40 * _glowAnimation.value,
+                  spreadRadius: 4 * _glowAnimation.value,
+                ),
+              ],
+            ),
+            child: child,
+          );
+        },
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // حلقة خارجية نابضة
+            if (!isActive)
+              Animate(
+                effects: const [
+                  ScaleEffect(
+                    begin: Offset(0.9, 0.9),
+                    end: Offset(1.1, 1.1),
+                    duration: Duration(milliseconds: 2000),
+                    curve: Curves.easeInOut,
+                  ),
+                  FadeEffect(
+                    begin: 0.5,
+                    end: 0.0,
+                    duration: Duration(milliseconds: 2000),
+                  ),
+                ],
+                onPlay: (controller) => controller.repeat(),
+                child: Container(
+                  width: 68,
+                  height: 68,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppColors.accentAI.withOpacity(0.5),
+                      width: 2,
+                    ),
+                  ),
+                ),
+              ),
+            // أيقونة الميكروفون أو AI
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isActive ? Icons.close_rounded : Icons.mic_rounded,
+                  color: Colors.white,
+                  size: 26,
+                ),
+                if (!isActive)
+                  const Text(
+                    'AI',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1,
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+```
+---
+### الخطوة 16: لوحة أوامر الذكاء الاصطناعي
+**المسار:** `lib/features/editor/presentation/widgets/panels/ai_commands_panel.dart`
+```dart
+// lib/features/editor/presentation/widgets/panels/ai_commands_panel.dart
+// لوحة إدخال الأوامر النصية والصوتية للذكاء الاصطناعي
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../cubit/editor_cubit.dart';
+import '../../../../../shared/theme/app_colors.dart';
+import '../../../../../features/ai_commands/services/ai_command_parser_service.dart';
+class AiCommandsPanel extends StatefulWidget {
+  const AiCommandsPanel({super.key});
+  @override
+  State<AiCommandsPanel> createState() => _AiCommandsPanelState();
+}
+class _AiCommandsPanelState extends State<AiCommandsPanel> {
+  final TextEditingController _commandController = TextEditingController();
+  final AiCommandParserService _parserService = AiCommandParserService();
+  bool _isProcessing = false;
+  bool _isListening = false;
+  List<String> _commandHistory = [];
+  // أمثلة على الأوامر للمستخدم
+  final List<String> _exampleCommands = [
+    'غيّر لون الفيديو إلى سينمائي ليلي أزرق',
+    'أضف ترجمة تلقائية للفيديو',
+    'أزل الخلفية واستبدلها بشاطئ',
+    'قلل الضوضاء وأضف موسيقى هادئة',
+    'أضف تتبع حركة على الشخص',
+    'اجعل الفيديو بجودة سينمائية 24fps',
+  ];
+  @override
+  void dispose() {
+    _commandController.dispose();
+    super.dispose();
+  }
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.6,
+      decoration: const BoxDecoration(
+        color: AppColors.backgroundSecondary,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        children: [
+          // ====== المقبض ======
+          const SizedBox(height: 12),
+          Center(
+            child: Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.textDisabled,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // ====== العنوان ======
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    gradient: AppColors.aiButtonGradient,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.auto_awesome,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'الأوامر الذكية',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    Text(
+                      'اكتب أو قل ما تريد تطبيقه',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          // ====== أمثلة الأوامر (قابلة للنقر) ======
+          SizedBox(
+            height: 36,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: _exampleCommands.length,
+              itemBuilder: (context, index) {
+                return GestureDetector(
+                  onTap: () {
+                    _commandController.text = _exampleCommands[index];
+                    setState(() {});
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.accentAI.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: AppColors.accentAI.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      _exampleCommands[index],
+                      style: const TextStyle(
+                        color: AppColors.accentAI,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
+          // ====== تاريخ الأوامر ======
+          if (_commandHistory.isNotEmpty) ...[
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: _commandHistory.length,
+                itemBuilder: (context, index) {
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.backgroundTertiary,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.history_rounded,
+                          size: 16,
+                          color: AppColors.textTertiary,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _commandHistory[index],
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
+                        const Icon(
+                          Icons.check_circle_rounded,
+                          size: 14,
+                          color: AppColors.accentSuccess,
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ] else
+            const Spacer(),
+          // ====== حقل إدخال الأمر + زر الإرسال ======
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: Row(
+              children: [
+                // حقل النص
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.backgroundTertiary,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: AppColors.accentAI.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _commandController,
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 14,
+                            ),
+                            decoration: const InputDecoration(
+                              hintText: 'اكتب أمرك هنا...',
+                              hintStyle: TextStyle(
+                                color: AppColors.textDisabled,
+                                fontSize: 14,
+                              ),
+                              contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 14),
+                              border: InputBorder.none,
+                            ),
+                            maxLines: 2,
+                            minLines: 1,
+                            textDirection: TextDirection.rtl,
+                            onChanged: (value) => setState(() {}),
+                          ),
+                        ),
+                        // زر الميكروفون
+                        GestureDetector(
+                          onTap: _toggleListening,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            margin: const EdgeInsets.only(right: 8),
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: _isListening
+                                  ? AppColors.accentDanger.withOpacity(0.2)
+                                  : AppColors.backgroundElevated,
+                            ),
+                            child: Icon(
+                              _isListening ? Icons.stop_rounded : Icons.mic_rounded,
+                              size: 18,
+                              color: _isListening
+                                  ? AppColors.accentDanger
+                                  : AppColors.textTertiary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                // زر الإرسال
+                GestureDetector(
+                  onTap: _commandController.text.isEmpty ? null : _executeCommand,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      gradient: _commandController.text.isEmpty
+                          ? null
+                          : AppColors.aiButtonGradient,
+                      color: _commandController.text.isEmpty
+                          ? AppColors.backgroundElevated
+                          : null,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: _commandController.text.isEmpty
+                          ? null
+                          : AppColors.aiButtonGlow,
+                    ),
+                    child: _isProcessing
+                        ? const Padding(
+                            padding: EdgeInsets.all(12),
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Icon(
+                            Icons.send_rounded,
+                            color: _commandController.text.isEmpty
+                                ? AppColors.textDisabled
+                                : Colors.white,
+                            size: 20,
+                          ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  // تنفيذ أمر الذكاء الاصطناعي
+  Future<void> _executeCommand() async {
+    final command = _commandController.text.trim();
+    if (command.isEmpty) return;
+    setState(() => _isProcessing = true);
+    try {
+      // تحليل الأمر إلى JSON Actions
+      final actions = await _parserService.parseCommand(
+        command: command,
+        timelineState: context.read<EditorCubit>().state.timelineState,
+      );
+      // تطبيق الأوامر على التايم لاين
+      if (mounted) {
+        await context.read<EditorCubit>().applyAIActions(actions);
+        
+        setState(() {
+          _commandHistory.insert(0, command);
+          _commandController.clear();
+          _isProcessing = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ: $e'),
+            backgroundColor: AppColors.accentDanger,
+          ),
+        );
+      }
+    }
+  }
+  void _toggleListening() {
+    setState(() => _isListening = !_isListening);
+    // سيتم ربط التعرف على الكلام هنا
+  }
+}
+```
+---
+### الخطوة 17: محلل أوامر الذكاء الاصطناعي
+**المسار:** `lib/features/ai_commands/services/ai_command_parser_service.dart`
+```dart
+// lib/features/ai_commands/services/ai_command_parser_service.dart
+// هذه الخدمة تأخذ الأمر النصي وتحوله إلى قائمة JSON Actions
+// تستخدم API الذكاء الاصطناعي لفهم الأمر المركب
+import 'dart:convert';
+import 'package:dio/dio.dart';
+import '../../../core/models/timeline_models.dart';
+import '../../../shared/constants/app_constants.dart';
+class AiCommandParserService {
+  final Dio _dio = Dio(BaseOptions(
+    baseUrl: AppConstants.apiBaseUrl,
+    connectTimeout: const Duration(seconds: 30),
+    receiveTimeout: const Duration(seconds: 60),
+  ));
+  // ====================================================
+  // تحليل الأمر النصي إلى قائمة Actions قابلة للتنفيذ
+  // ====================================================
+  Future<List<Map<String, dynamic>>> parseCommand({
+    required String command,
+    required TimelineState timelineState,
+  }) async {
+    // بناء سياق التايم لاين للإرسال للذكاء الاصطناعي
+    final timelineContext = _buildTimelineContext(timelineState);
+    try {
+      final response = await _dio.post(
+        '/ai/parse-command',
+        data: {
+          'command': command,
+          'language': 'ar',           // اللغة العربية
+          'timeline_context': timelineContext,
+          'available_effects': _getAvailableEffects(),
+        },
+      );
+      final data = response.data as Map<String, dynamic>;
+      final actionsList = data['actions'] as List<dynamic>;
+      
+      return actionsList
+          .map((action) => action as Map<String, dynamic>)
+          .toList();
+    } on DioException catch (e) {
+      // إذا فشل الاتصال بالسيرفر، استخدم المعالجة المحلية
+      return await _parseCommandLocally(command, timelineState);
+    }
+  }
+  // ====================================================
+  // المعالجة المحلية (fallback عند عدم الاتصال)
+  // تحلل الأوامر الشائعة بدون إنترنت
+  // ====================================================
+  Future<List<Map<String, dynamic>>> _parseCommandLocally(
+      String command, TimelineState timelineState) async {
+    
+    final List<Map<String, dynamic>> actions = [];
+    final lowerCommand = command.toLowerCase();
+    // ====== كشف أوامر تصحيح الألوان ======
+    if (lowerCommand.contains('سينمائي') ||
+        lowerCommand.contains('ليلي') ||
+        lowerCommand.contains('أزرق') ||
+        lowerCommand.contains('لون')) {
+      actions.add({
+        'type': 'apply_color_grade',
+        'target': 'all_clips',
+        'parameters': _detectColorGradeParameters(lowerCommand),
+      });
+    }
+    // ====== كشف أوامر إزالة الخلفية ======
+    if (lowerCommand.contains('أزل الخلفية') ||
+        lowerCommand.contains('إزالة الخلفية') ||
+        lowerCommand.contains('ازل الخلفية')) {
+      actions.add({
+        'type': 'remove_background',
+        'target': _getFirstVideoClipId(timelineState),
+        'parameters': {
+          'method': 'ai_segmentation',
+          'model': 'mediapipe_selfie',
+        },
+      });
+    }
+    // ====== كشف أوامر الترجمة التلقائية ======
+    if (lowerCommand.contains('ترجمة') ||
+        lowerCommand.contains('subtitle') ||
+        lowerCommand.contains('caption')) {
+      actions.add({
+        'type': 'generate_captions',
+        'target': 'all_clips',
+        'parameters': {
+          'language': 'auto_detect',
+          'model': 'whisper_tiny',
+        },
+      });
+    }
+    // ====== كشف أوامر تقليل الضوضاء ======
+    if (lowerCommand.contains('ضوضاء') ||
+        lowerCommand.contains('noise') ||
+        lowerCommand.contains('صوت')) {
+      actions.add({
+        'type': 'reduce_noise',
+        'target': 'all_audio',
+        'parameters': {
+          'strength': 0.7,
+        },
+      });
+    }
+    // ====== كشف أوامر تتبع الحركة ======
+    if (lowerCommand.contains('تتبع') ||
+        lowerCommand.contains('motion tracking')) {
+      actions.add({
+        'type': 'apply_motion_tracking',
+        'clipId': _getFirstVideoClipId(timelineState) ?? '',
+        'parameters': {
+          'target': 'person',
+          'tracking_type': 'face',
+        },
+      });
+    }
+    // ====== كشف أوامر إضافة الموسيقى ======
+    if (lowerCommand.contains('موسيقى') ||
+        lowerCommand.contains('music')) {
+      actions.add({
+        'type': 'add_music',
+        'parameters': {
+          'mood': _detectMusicMood(lowerCommand),
+          'volume': 0.4,
+          'fade_in': 1.0,
+          'fade_out': 2.0,
+        },
+      });
+    }
+    // إذا لم يُكتشف أي أمر معروف
+    if (actions.isEmpty) {
+      throw Exception('لم أفهم هذا الأمر. حاول صياغته بشكل أبسط.');
+    }
+    return actions;
+  }
+  // ====================================================
+  // كشف معاملات تصحيح الألوان من النص
+  // ====================================================
+  Map<String, dynamic> _detectColorGradeParameters(String command) {
+    // الأنماط الشائعة
+    if (command.contains('ليلي') || command.contains('أزرق')) {
+      return {
+        'temperature': -0.3,      // برودة لونية (أزرق)
+        'tint': 0.05,
+        'brightness': -0.15,      // تعتيم طفيف
+        'contrast': 0.25,         // زيادة التباين
+        'saturation': -0.1,       // تقليل التشبع قليلاً
+        'shadows': 0.1,           // رفع الظلال
+        'highlights': -0.2,       // خفض الإضاءة العالية
+        'preset_name': 'night_cinematic',
+      };
+    } else if (command.contains('دافئ') || command.contains('ذهبي')) {
+      return {
+        'temperature': 0.3,       // دفء (برتقالي/أصفر)
+        'tint': -0.05,
+        'brightness': 0.05,
+        'contrast': 0.15,
+        'saturation': 0.1,
+        'shadows': -0.1,
+        'highlights': 0.1,
+        'preset_name': 'golden_warm',
+      };
+    } else if (command.contains('أبيض وأسود') || command.contains('بلاك')) {
+      return {
+        'saturation': -1.0,       // إزالة الألوان كلياً
+        'contrast': 0.3,
+        'brightness': 0.05,
+        'preset_name': 'black_white',
+      };
+    }
+    // افتراضي: تصحيح سينمائي عام
+    return {
+      'temperature': -0.1,
+      'contrast': 0.2,
+      'saturation': -0.05,
+      'shadows': 0.15,
+      'highlights': -0.1,
+      'preset_name': 'cinematic_default',
+    };
+  }
+  // كشف مزاج الموسيقى
+  String _detectMusicMood(String command) {
+    if (command.contains('هادئ') || command.contains('رخيم')) return 'calm';
+    if (command.contains('حزين')) return 'sad';
+    if (command.contains('حماسي') || command.contains('نشيط')) return 'energetic';
+    if (command.contains('رومانسي')) return 'romantic';
+    return 'calm';
+  }
+  // الحصول على أول مقطع فيديو
+  String? _getFirstVideoClipId(TimelineState state) {
+    if (state.videoClips.isEmpty) return null;
+    return state.videoClips.first.id;
+  }
+  // بناء ملخص التايم لاين للإرسال للـ API
+  Map<String, dynamic> _buildTimelineContext(TimelineState state) {
+    return {
+      'total_duration': state.totalDuration,
+      'video_clips_count': state.videoClips.length,
+      'audio_clips_count': state.audioClips.length,
+      'video_clip_ids': state.videoClips.map((c) => c.id).toList(),
+      'has_audio': state.audioClips.isNotEmpty,
+      'resolution': state.settings.resolution,
+    };
+  }
+  // قائمة التأثيرات المتاحة
+  List<String> _getAvailableEffects() {
+    return [
+      'color_grade', 'background_removal', 'motion_tracking',
+      'auto_captions', 'noise_reduction', 'stabilization',
+      'speed_ramp', 'blur', 'vignette', 'film_grain',
+    ];
+  }
+}
+```
+---
+### الخطوة 18: لوحة الصوت المتخصصة
+**المسار:** `lib/features/editor/presentation/widgets/panels/audio_panel.dart`
+```dart
+// lib/features/editor/presentation/widgets/panels/audio_panel.dart
+// لوحة الصوت الكاملة: ميكساج، عزل الصوت، مستويات التشغيل
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../cubit/editor_cubit.dart';
+import '../../../../../shared/theme/app_colors.dart';
+import '../../../../../core/models/timeline_models.dart';
+class AudioPanel extends StatefulWidget {
+  const AudioPanel({super.key});
+  @override
+  State<AudioPanel> createState() => _AudioPanelState();
+}
+class _AudioPanelState extends State<AudioPanel>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  // مستويات صوت المسارات (سيتم ربطها بالـ Cubit لاحقاً)
+  double _videoAudioVolume = 1.0;
+  double _musicVolume = 0.6;
+  double _voiceOverVolume = 1.0;
+  double _sfxVolume = 0.8;
+  // معاملات معالجة الصوت
+  double _noiseReductionStrength = 0.0;
+  double _bassBoost = 0.0;
+  double _trebleBoost = 0.0;
+  double _compressionRatio = 1.0;
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+  }
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.65,
+      decoration: const BoxDecoration(
+        color: AppColors.backgroundSecondary,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        children: [
+          // ====== المقبض ======
+          const SizedBox(height: 12),
+          Center(
+            child: Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.textDisabled,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          // ====== العنوان + التبويبات ======
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.timelineTrackAudio.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.equalizer_rounded,
+                    color: AppColors.accentSuccess,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'محرر الصوت',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ],
+            ),
+          ),
+          // تبويبات: الميكسر / المعالجة / عزل الصوت
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: TabBar(
+              controller: _tabController,
+              indicatorColor: AppColors.accentSuccess,
+              labelColor: AppColors.accentSuccess,
+              unselectedLabelColor: AppColors.textTertiary,
+              indicatorSize: TabBarIndicatorSize.label,
+              labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              tabs: const [
+                Tab(text: 'الميكسر'),
+                Tab(text: 'معالجة'),
+                Tab(text: 'عزل الصوت'),
+              ],
+            ),
+          ),
+          // ====== محتوى التبويبات ======
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildMixerTab(),
+                _buildProcessingTab(),
+                _buildIsolationTab(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  // ====== تبويب الميكسر ======
+  Widget _buildMixerTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        children: [
+          _buildVolumeSlider(
+            label: 'صوت الفيديو',
+            icon: Icons.videocam_outlined,
+            color: AppColors.timelineTrackVideo,
+            value: _videoAudioVolume,
+            onChanged: (v) => setState(() => _videoAudioVolume = v),
+          ),
+          const SizedBox(height: 16),
+          _buildVolumeSlider(
+            label: 'الموسيقى',
+            icon: Icons.music_note_rounded,
+            color: AppColors.accentSuccess,
+            value: _musicVolume,
+            onChanged: (v) => setState(() => _musicVolume = v),
+          ),
+          const SizedBox(height: 16),
+          _buildVolumeSlider(
+            label: 'التعليق الصوتي',
+            icon: Icons.mic_rounded,
+            color: AppColors.accentPrimary,
+            value: _voiceOverVolume,
+            onChanged: (v) => setState(() => _voiceOverVolume = v),
+          ),
+          const SizedBox(height: 16),
+          _buildVolumeSlider(
+            label: 'المؤثرات الصوتية',
+            icon: Icons.surround_sound_outlined,
+            color: AppColors.accentWarning,
+            value: _sfxVolume,
+            onChanged: (v) => setState(() => _sfxVolume = v),
+          ),
+          const SizedBox(height: 24),
+          // زر مزامنة الصوت مع الإيقاع
+          _buildActionButton(
+            icon: Icons.sync_rounded,
+            label: 'مزامنة مع الإيقاع',
+            color: AppColors.accentPrimary,
+            onTap: () {},
+          ),
+          const SizedBox(height: 12),
+          _buildActionButton(
+            icon: Icons.auto_fix_high_rounded,
+            label: 'مطابقة صوت مرجعي (AI)',
+            color: AppColors.accentAI,
+            isPremium: true,
+            onTap: () {},
+          ),
+        ],
+      ),
+    );
+  }
+  // ====== تبويب المعالجة ======
+  Widget _buildProcessingTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        children: [
+          _buildEffectSlider(
+            label: 'تقليل الضوضاء',
+            icon: Icons.noise_aware_rounded,
+            value: _noiseReductionStrength,
+            onChanged: (v) => setState(() => _noiseReductionStrength = v),
+          ),
+          const SizedBox(height: 16),
+          _buildEffectSlider(
+            label: 'تعزيز الجهير (Bass)',
+            icon: Icons.graphic_eq_rounded,
+            value: _bassBoost,
+            min: -1.0, max: 1.0,
+            onChanged: (v) => setState(() => _bassBoost = v),
+          ),
+          const SizedBox(height: 16),
+          _buildEffectSlider(
+            label: 'تعزيز الحاد (Treble)',
+            icon: Icons.equalizer_rounded,
+            value: _trebleBoost,
+            min: -1.0, max: 1.0,
+            onChanged: (v) => setState(() => _trebleBoost = v),
+          ),
+          const SizedBox(height: 16),
+          _buildEffectSlider(
+            label: 'ضغط الصوت (Compressor)',
+            icon: Icons.compress_rounded,
+            value: _compressionRatio,
+            min: 1.0, max: 10.0,
+            onChanged: (v) => setState(() => _compressionRatio = v),
+          ),
+          const SizedBox(height: 24),
+          // تطبيق المعالجة
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {},
+              icon: const Icon(Icons.play_arrow_rounded),
+              label: const Text('معاينة التأثيرات'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  // ====== تبويب عزل الصوت ======
+  Widget _buildIsolationTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'عزل الصوت بالذكاء الاصطناعي',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'يفصل هذا الخيار صوت الأشخاص عن الموسيقى الخلفية',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 20),
+          _buildIsolationOption(
+            title: 'عزل صوت الكلام',
+            subtitle: 'استخراج أصوات الأشخاص فقط',
+            icon: Icons.record_voice_over_rounded,
+            onTap: () {},
+          ),
+          const SizedBox(height: 12),
+          _buildIsolationOption(
+            title: 'عزل الموسيقى',
+            subtitle: 'استخراج الموسيقى الخلفية فقط',
+            icon: Icons.library_music_rounded,
+            onTap: () {},
+          ),
+          const SizedBox(height: 12),
+          _buildIsolationOption(
+            title: 'إزالة الكلام',
+            subtitle: 'الإبقاء على الموسيقى وحذف الكلام',
+            icon: Icons.voice_over_off_rounded,
+            onTap: () {},
+          ),
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.accentWarning.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppColors.accentWarning.withOpacity(0.3),
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, color: AppColors.accentWarning, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'عزل الصوت يتطلب معالجة محلية قد تستغرق دقيقة واحدة.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.accentWarning,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  // ====== عناصر الواجهة المساعدة ======
+  Widget _buildVolumeSlider({
+    required String label,
+    required IconData icon,
+    required Color color,
+    required double value,
+    required ValueChanged<double> onChanged,
+  }) {
+    return Row(
+      children: [
+        Container(
+          width: 36, height: 36,
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: color, size: 18),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(label,
+                      style: Theme.of(context).textTheme.bodyMedium),
+                  Text('${(value * 100).toInt()}%',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: color,
+                      )),
+                ],
+              ),
+              SliderTheme(
+                data: SliderTheme.of(context).copyWith(
+                  trackHeight: 3,
+                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+                  overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
+                  activeTrackColor: color,
+                  inactiveTrackColor: color.withOpacity(0.2),
+                  thumbColor: color,
+                  overlayColor: color.withOpacity(0.2),
+                ),
+                child: Slider(
+                  value: value,
+                  min: 0.0,
+                  max: 1.0,
+                  onChanged: onChanged,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+  Widget _buildEffectSlider({
+    required String label,
+    required IconData icon,
+    required double value,
+    required ValueChanged<double> onChanged,
+    double min = 0.0,
+    double max = 1.0,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, color: AppColors.textSecondary, size: 16),
+            const SizedBox(width: 8),
+            Text(label, style: Theme.of(context).textTheme.bodyMedium),
+            const Spacer(),
+            Text(
+              value.toStringAsFixed(2),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColors.accentPrimary,
+                fontFamily: 'monospace',
+              ),
+            ),
+          ],
+        ),
+        SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            trackHeight: 3,
+            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+            activeTrackColor: AppColors.accentPrimary,
+            inactiveTrackColor: AppColors.backgroundElevated,
+            thumbColor: AppColors.accentPrimary,
+          ),
+          child: Slider(
+            value: value,
+            min: min,
+            max: max,
+            onChanged: onChanged,
+          ),
+        ),
+      ],
+    );
+  }
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+    bool isPremium = false,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.3), width: 1),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(label, style: TextStyle(color: color, fontSize: 14)),
+            ),
+            if (isPremium)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  gradient: AppColors.aiButtonGradient,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text(
+                  'Pro',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+  Widget _buildIsolationOption({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.backgroundTertiary,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44, height: 44,
+              decoration: BoxDecoration(
+                color: AppColors.accentSuccess.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: AppColors.accentSuccess, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: Theme.of(context).textTheme.titleMedium),
+                  Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: AppColors.textTertiary,
+              size: 14,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+```
+---
+### الخطوة 19: نظام حماية الجهاز (Device ID & Trial)
+**المسار:** `lib/features/subscription/services/device_security_service.dart`
+```dart
+// lib/features/subscription/services/device_security_service.dart
+// هذا الملف يبني نظام الحماية المتكامل للفترة التجريبية
+// يربط الحساب ببصمة الجهاز بشكل دائم لمنع التحايل
+import 'dart:convert';
+import 'dart:io';
+import 'package:crypto/crypto.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import '../../../shared/constants/app_constants.dart';
+class DeviceSecurityService {
+  final FlutterSecureStorage _secureStorage;
+  final DeviceInfoPlugin _deviceInfo = DeviceInfoPlugin();
+  DeviceSecurityService()
+      : _secureStorage = const FlutterSecureStorage(
+          aOptions: AndroidOptions(encryptedSharedPreferences: true),
+          iOptions: IOSOptions(
+            accessibility: KeychainAccessibility.first_unlock,
+          ),
+        );
+  // ====================================================
+  // الحصول على بصمة الجهاز الفريدة
+  // تجمع معلومات متعددة لضمان التفرد وصعوبة التزوير
+  // ====================================================
+  Future<String> getDeviceFingerprint() async {
+    // تحقق أولاً إذا كانت البصمة محفوظة مسبقاً
+    final stored = await _secureStorage.read(key: AppConstants.deviceIdKey);
+    if (stored != null) return stored;
+    // بناء البصمة من معلومات الجهاز
+    final rawFingerprint = await _buildRawFingerprint();
+    
+    // تشفير البصمة بـ SHA-256 لجعلها أمنة
+    final bytes = utf8.encode(rawFingerprint);
+    final digest = sha256.convert(bytes);
+    final fingerprint = digest.toString();
+    // حفظ البصمة في مخزن مشفر
+    await _secureStorage.write(
+      key: AppConstants.deviceIdKey,
+      value: fingerprint,
+    );
+    return fingerprint;
+  }
+  // ====================================================
+  // بناء البصمة الخام من معلومات الجهاز
+  // ====================================================
+  Future<String> _buildRawFingerprint() async {
+    final components = <String>[];
+    if (Platform.isAndroid) {
+      final androidInfo = await _deviceInfo.androidInfo;
+      // معرف الجهاز الفريد من أندرويد
+      components.addAll([
+        androidInfo.id,
+        androidInfo.androidId ?? '',
+        androidInfo.brand,
+        androidInfo.model,
+        androidInfo.board,
+        androidInfo.bootloader,
+        androidInfo.hardware,
+        androidInfo.host,
+      ]);
+    } else if (Platform.isIOS) {
+      final iosInfo = await _deviceInfo.iosInfo;
+      // معرف الجهاز من iOS
+      components.addAll([
+        iosInfo.identifierForVendor ?? '',
+        iosInfo.model,
+        iosInfo.name,
+        iosInfo.systemVersion,
+      ]);
+    }
+    // إضافة اسم التطبيق لضمان تفرد البصمة لكل تطبيق
+    final packageInfo = await PackageInfo.fromPlatform();
+    components.add(packageInfo.packageName);
+    return components.join('|');
+  }
+  // ====================================================
+  // التحقق من حالة الفترة التجريبية
+  // ====================================================
+  Future<TrialStatus> checkTrialStatus() async {
+    final deviceId = await getDeviceFingerprint();
+    
+    // جلب تاريخ بداية التجربة من التخزين المشفر
+    final trialStartStr = await _secureStorage.read(
+      key: AppConstants.trialStartKey,
+    );
+    
+    if (trialStartStr == null) {
+      // أول تشغيل للتطبيق - بدء الفترة التجريبية
+      return TrialStatus(
+        isFirstLaunch: true,
+        isTrialActive: false,
+        daysRemaining: 0,
+        deviceId: deviceId,
+        trialStartDate: null,
+      );
+    }
+    
+    final trialStart = DateTime.fromMillisecondsSinceEpoch(
+      int.parse(trialStartStr),
+    );
+    final now = DateTime.now();
+    final daysPassed = now.difference(trialStart).inDays;
+    final daysRemaining = AppConstants.freeTrialDays - daysPassed;
+    return TrialStatus(
+      isFirstLaunch: false,
+      isTrialActive: daysRemaining > 0,
+      daysRemaining: daysRemaining.clamp(0, AppConstants.freeTrialDays),
+      deviceId: deviceId,
+      trialStartDate: trialStart,
+    );
+  }
+  // ====================================================
+  // بدء الفترة التجريبية (يُستدعى مرة واحدة فقط)
+  // ====================================================
+  Future<void> startTrial() async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    await _secureStorage.write(
+      key: AppConstants.trialStartKey,
+      value: now.toString(),
+    );
+  }
+  // ====================================================
+  // التحقق من حدود التصدير
+  // ====================================================
+  Future<ExportPermission> checkExportPermission({
+    required String resolution,
+    required bool hasSubscription,
+  }) async {
+    // المشتركون لديهم تصدير غير محدود
+    if (hasSubscription) {
+      return ExportPermission.allowed();
+    }
+    final trialStatus = await checkTrialStatus();
+    
+    // إذا انتهت الفترة التجريبية، لا يُسمح بالتصدير بجودة عالية
+    if (!trialStatus.isTrialActive) {
+      if (resolution == '4K' || resolution == '1080p') {
+        return ExportPermission.denied(
+          reason: 'انتهت فترتك التجريبية. اشترك لمواصلة التصدير.',
+        );
+      }
+    }
+    // حساب عدد مرات التصدير
+    final exportCountKey = AppConstants.exportCountKey + resolution;
+    final countStr = await _secureStorage.read(key: exportCountKey) ?? '0';
+    final exportCount = int.parse(countStr);
+    final limit = resolution == '4K'
+        ? AppConstants.freeExportLimit4K
+        : AppConstants.freeExportLimit1080p;
+    if (exportCount >= limit) {
+      return ExportPermission.denied(
+        reason: 'وصلت للحد الأقصى للتصدير المجاني ($limit مرة).',
+        currentCount: exportCount,
+        limit: limit,
+      );
+    }
+    return ExportPermission.allowed(
+      currentCount: exportCount,
+      limit: limit,
+    );
+  }
+  // ====================================================
+  // زيادة عداد التصدير
+  // ====================================================
+  Future<void> incrementExportCount(String resolution) async {
+    final exportCountKey = AppConstants.exportCountKey + resolution;
+    final countStr = await _secureStorage.read(key: exportCountKey) ?? '0';
+    final newCount = int.parse(countStr) + 1;
+    await _secureStorage.write(
+      key: exportCountKey,
+      value: newCount.toString(),
+    );
+  }
+  // ====================================================
+  // تسجيل الجهاز في السيرفر (يُستدعى عند التسجيل)
+  // ====================================================
+  Future<bool> registerDeviceWithServer({
+    required String userId,
+    required String userToken,
+  }) async {
+    try {
+      final deviceId = await getDeviceFingerprint();
+      
+      // سيتم إرسال البصمة للسيرفر لتسجيلها مع الحساب
+      // هذا يمنع استخدام الفترة التجريبية مرتين بنفس الجهاز
+      // حتى بعد حذف التطبيق وإعادة تثبيته
+      
+      // TODO: استدعاء API لتسجيل الجهاز
+      // await _apiService.registerDevice(userId, deviceId, userToken);
+      
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+}
+// ====================================================
+// نماذج البيانات
+// ====================================================
+class TrialStatus {
+  final bool isFirstLaunch;
+  final bool isTrialActive;
+  final int daysRemaining;
+  final String deviceId;
+  final DateTime? trialStartDate;
+  const TrialStatus({
+    required this.isFirstLaunch,
+    required this.isTrialActive,
+    required this.daysRemaining,
+    required this.deviceId,
+    required this.trialStartDate,
+  });
+}
+class ExportPermission {
+  final bool isAllowed;
+  final String? denialReason;
+  final int? currentCount;
+  final int? limit;
+  const ExportPermission._({
+    required this.isAllowed,
+    this.denialReason,
+    this.currentCount,
+    this.limit,
+  });
+  factory ExportPermission.allowed({int? currentCount, int? limit}) {
+    return ExportPermission._(
+      isAllowed: true,
+      currentCount: currentCount,
+      limit: limit,
+    );
+  }
+  factory ExportPermission.denied({
+    required String reason,
+    int? currentCount,
+    int? limit,
+  }) {
+    return ExportPermission._(
+      isAllowed: false,
+      denialReason: reason,
+      currentCount: currentCount,
+      limit: limit,
+    );
+  }
+}
+```
+---
+### الخطوة 20: ملف main.dart والتهيئة الكاملة
+**المسار:** `lib/main.dart`
+```dart
+// lib/main.dart
+// نقطة الانطلاق الرئيسية للتطبيق
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:get_it/get_it.dart';
+import 'shared/theme/app_theme.dart';
+import 'features/editor/presentation/screens/editor_screen.dart';
+import 'features/subscription/services/device_security_service.dart';
+// حاوي الخدمات العالمية (Service Locator)
+final GetIt serviceLocator = GetIt.instance;
+Future<void> main() async {
+  // التأكد من تهيئة Flutter قبل أي عملية
+  WidgetsFlutterBinding.ensureInitialized();
+  // إجبار الشاشة على الوضع الرأسي فقط
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+  // تهيئة الخدمات العالمية
+  await _initializeServices();
+  runApp(const CinematicEditorApp());
+}
+Future<void> _initializeServices() async {
+  // تسجيل الخدمات في حاوي الاعتماديات
+  serviceLocator.registerLazySingleton<DeviceSecurityService>(
+    () => DeviceSecurityService(),
+  );
+}
+class CinematicEditorApp extends StatelessWidget {
+  const CinematicEditorApp({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Cinematic Editor',
+      debugShowCheckedModeBanner: false,
+      // تطبيق الثيم الداكن
+      theme: AppTheme.darkTheme,
+      themeMode: ThemeMode.dark,
+      // الصفحة الرئيسية (مؤقتاً المحرر مباشرة، لاحقاً ستُضاف شاشة البداية)
+      home: const EditorScreen(projectId: 'default_project'),
+      // إعدادات الأداء
+      builder: (context, child) {
+        return ScrollConfiguration(
+          // إزالة أثر التمرير الأزرق في أندرويد
+          behavior: const ScrollBehavior().copyWith(overscroll: false),
+          child: child!,
+        );
+      },
+    );
+  }
+}
+```
+---
+### الخطوة 21: تشغيل المشروع للتحقق
+```bash
+# الوقوف في مجلد المشروع
+cd /workspaces/cinematic_editor
+# تنزيل كل المكتبات المعرفة في pubspec.yaml
+flutter pub get
+# إنشاء الملفات التلقائية (Code Generation)
+dart run build_runner build --delete-conflicting-outputs
+# التحقق من صحة الكود
+flutter analyze
+# تشغيل التطبيق على المحاكي (إذا كان متاحاً)
+flutter run --debug
+```
+---
+### ملخص ما بنيناه حتى الآن
+
+
+| المكوّن | الملف | الحالة |
+| :--- | :--- | :--- |
+| هيكل الملفات الكامل | `/workspaces/cinematic_editor/` | ✅ |
+| المكتبات والاعتماديات | `pubspec.yaml` | ✅ |
+| نظام الألوان والثيمات | `lib/shared/theme/` | ✅ |
+| النماذج الأساسية (VideoClip, AudioClip…) | `lib/core/models/` | ✅ |
+| نظام Undo/Redo بالـ JSON | `lib/core/services/undo_redo_service.dart` | ✅ |
+| محرك الحالة (EditorCubit) | `lib/features/editor/presentation/cubit/` | ✅ |
+| الشاشة الرئيسية للمحرر | `lib/features/editor/presentation/screens/` | ✅ |
+| الشريط العلوي + التصدير | `lib/features/editor/presentation/widgets/toolbar/` | ✅ |
+| مشغل الفيديو | `lib/features/editor/presentation/widgets/preview/` | ✅ |
+| التايم لاين الكامل | `lib/features/editor/presentation/widgets/timeline/` | ✅ |
+| شريط الأدوات السفلي + زر AI | `lib/features/editor/presentation/widgets/toolbar/` | ✅ |
+| لوحة أوامر الذكاء الاصطناعي | `lib/features/editor/presentation/widgets/panels/` | ✅ |
+| محلل أوامر الذكاء الاصطناعي | `lib/features/ai_commands/services/` | ✅ |
+| لوحة الصوت المتخصصة | `lib/features/editor/presentation/widgets/panels/` | ✅ |
+| نظام حماية الجهاز + التجربة | `lib/features/subscription/services/` | ✅ |
+| نقطة الانطلاق الرئيسية | `lib/main.dart` | ✅ |
+
+
+---
+**الخطوة القادمة:** في الجزء الثاني سنبني:
+1. **محرك C++ مدمج مع FFmpeg** (جسر Dart-to-C++ عبر FFI) لمعالجة الفيديو بدون إنترنت
+2. **خدمة إنشاء Proxy تلقائي** (تحويل 4K إلى 360p للتحرير السلس)
+3. **التكامل الكامل مع MediaPipe** لإزالة الخلفية محلياً
+4. **نظام Whisper TFLite** للترجمة التلقائية
+5. **السيرفر الخلفي بـ FastAPI + AWS** للميزات المدفوعة
+هل تريد المتابعة مباشرة إلى الجزء الثاني؟
