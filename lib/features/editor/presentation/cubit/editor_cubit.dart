@@ -5,7 +5,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../../../../core/models/timeline_models.dart';
 import '../../../../core/services/undo_redo_service.dart';
-import '../../../../shared/constants/app_constants.dart';
+import '../../../audio/services/audio_mixer_service.dart';
+import '../../../audio/services/audio_effects_service.dart';
+import '../../../audio/services/waveform_service.dart';
 // ====================================================
 // حالة المحرر
 // ====================================================
@@ -103,8 +105,15 @@ enum EditorStatus { idle, loading, processing, error }
 // ====================================================
 class EditorCubit extends Cubit<EditorState> {
   final UndoRedoService _undoRedoService;
+  final AudioMixerService _audioMixerService;
+  final AudioEffectsService _audioEffectsService;
+  final WaveformService _waveformService;
+
   EditorCubit({required String projectId})
       : _undoRedoService = UndoRedoService(projectId: projectId),
+        _audioMixerService = const AudioMixerService(),
+        _audioEffectsService = const AudioEffectsService(),
+        _waveformService = const WaveformService(),
         super(EditorState.initial(projectId));
   // ====================================================
   // إضافة مقطع فيديو للتايم لاين
@@ -144,6 +153,111 @@ class EditorCubit extends Cubit<EditorState> {
       canUndo: historyInfo.canUndo,
       canRedo: historyInfo.canRedo,
     ));
+  }
+
+  Future<void> setAudioTrackVolume(AudioType trackType, double volume) async {
+    final updatedClips = _audioMixerService.applyTrackVolume(
+      state.timelineState.audioClips,
+      trackType,
+      volume,
+    );
+    final newTimelineState = state.timelineState.copyWith(audioClips: updatedClips);
+    await _undoRedoService.pushState(newTimelineState);
+    final historyInfo = _undoRedoService.historyInfo;
+    emit(state.copyWith(
+      timelineState: newTimelineState,
+      canUndo: historyInfo.canUndo,
+      canRedo: historyInfo.canRedo,
+    ));
+  }
+
+  Future<void> setAudioFade(
+    String clipId,
+    double fadeInDuration,
+    double fadeOutDuration,
+  ) async {
+    final clipIndex = state.timelineState.audioClips
+        .indexWhere((audio) => audio.id == clipId);
+    if (clipIndex == -1) return;
+
+    final updatedClip = _audioMixerService.applyFadeInOut(
+      state.timelineState.audioClips[clipIndex],
+      fadeInDuration: fadeInDuration,
+      fadeOutDuration: fadeOutDuration,
+    );
+    final updatedClips = [...state.timelineState.audioClips];
+    updatedClips[clipIndex] = updatedClip;
+
+    final newTimelineState = state.timelineState.copyWith(audioClips: updatedClips);
+    await _undoRedoService.pushState(newTimelineState);
+    final historyInfo = _undoRedoService.historyInfo;
+    emit(state.copyWith(
+      timelineState: newTimelineState,
+      canUndo: historyInfo.canUndo,
+      canRedo: historyInfo.canRedo,
+    ));
+  }
+
+  Future<void> applyAudioEffect(
+    String clipId,
+    AudioEffectType effectType, {
+    double intensity = 0.5,
+    double bass = 0.0,
+    double treble = 0.0,
+  }) async {
+    final clipIndex = state.timelineState.audioClips
+        .indexWhere((audio) => audio.id == clipId);
+    if (clipIndex == -1) return;
+
+    final updatedClip = _audioEffectsService.applyEffect(
+      state.timelineState.audioClips[clipIndex],
+      effectType,
+      intensity: intensity,
+      bass: bass,
+      treble: treble,
+    );
+    final updatedClips = [...state.timelineState.audioClips];
+    updatedClips[clipIndex] = updatedClip;
+
+    final newTimelineState = state.timelineState.copyWith(audioClips: updatedClips);
+    await _undoRedoService.pushState(newTimelineState);
+    final historyInfo = _undoRedoService.historyInfo;
+    emit(state.copyWith(
+      timelineState: newTimelineState,
+      canUndo: historyInfo.canUndo,
+      canRedo: historyInfo.canRedo,
+    ));
+  }
+
+  Future<void> applyAudioVolumeAutomation(
+    AudioType trackType,
+    List<VolumeAutomationPoint> automationCurve,
+  ) async {
+    final updatedClips = _audioMixerService.applyVolumeAutomation(
+      state.timelineState.audioClips,
+      trackType,
+      automationCurve,
+    );
+    final newTimelineState = state.timelineState.copyWith(audioClips: updatedClips);
+    await _undoRedoService.pushState(newTimelineState);
+    final historyInfo = _undoRedoService.historyInfo;
+    emit(state.copyWith(
+      timelineState: newTimelineState,
+      canUndo: historyInfo.canUndo,
+      canRedo: historyInfo.canRedo,
+    ));
+  }
+
+  Future<WaveformData> extractWaveform(
+    String filePath, {
+    int sampleCount = 120,
+    double duration = 0.0,
+  }) {
+    return _waveformService.extractWaveform(
+      filePath,
+      sampleCount: sampleCount,
+      duration: duration,
+    );
   }
   // ====================================================
   // تحريك مقطع على التايم لاين (Drag)
@@ -314,7 +428,8 @@ class EditorCubit extends Cubit<EditorState> {
           
         case 'remove_background':
           // تطبيق إزالة الخلفية على مقطع محدد أو الكل
-          final targetClipId = action['clipId'] as String?;
+          final targetClipId = action['clipId'] as String?
+              ?? action['target'] as String?;
           final effect = VideoEffect.create(
             type: EffectType.backgroundRemoval,
             parameters: action['parameters'] as Map<String, dynamic>? ?? {},
@@ -331,41 +446,80 @@ class EditorCubit extends Cubit<EditorState> {
           }
           break;
           
+        case 'add_music':
         case 'add_audio':
           // إضافة مسار صوتي من الذكاء الاصطناعي
-          final audioPath = action['audioPath'] as String;
-          final startTime = (action['startTime'] as num).toDouble();
-          final duration = (action['duration'] as num).toDouble();
-          final newAudioClip = AudioClip.create(
-            filePath: audioPath,
-            startTime: startTime,
-            duration: duration,
-            audioType: AudioType.music,
-          );
-          currentTimeline = currentTimeline.copyWith(
-            audioClips: [...currentTimeline.audioClips, newAudioClip],
-          );
+          final audioPath = action['audioPath'] as String?
+              ?? action['audioUrl'] as String?;
+          final startTime = (action['startTime'] as num?)?.toDouble() ?? 0.0;
+          final duration = (action['duration'] as num?)?.toDouble() ?? 10.0;
+          if (audioPath != null && audioPath.isNotEmpty) {
+            final newAudioClip = AudioClip.create(
+              filePath: audioPath,
+              startTime: startTime,
+              duration: duration,
+              audioType: AudioType.music,
+            );
+            currentTimeline = currentTimeline.copyWith(
+              audioClips: [...currentTimeline.audioClips, newAudioClip],
+            );
+          }
+          break;
+          
+        case 'generate_captions':
+          final captions = action['captions'] as List<dynamic>?;
+          if (captions != null && captions.isNotEmpty) {
+            final generatedTextLayers = captions.map((captionItem) {
+              final captionMap = captionItem as Map<String, dynamic>;
+              final captionText = captionMap['text'] as String? ?? 'Caption';
+              final captionStart = (captionMap['startTime'] as num?)?.toDouble() ?? 0.0;
+              final captionDuration = (captionMap['duration'] as num?)?.toDouble() ?? 3.0;
+              return TextLayer.create(
+                text: captionText,
+                startTime: captionStart,
+                duration: captionDuration,
+              ).copyWith(isSubtitle: true);
+            }).toList();
+            currentTimeline = currentTimeline.copyWith(
+              textLayers: [...currentTimeline.textLayers, ...generatedTextLayers],
+            );
+          } else if (action['text'] != null || action['target'] != null) {
+            final captionText = action['text'] as String? ?? 'Captions';
+            final captionStart = (action['startTime'] as num?)?.toDouble() ?? 0.0;
+            final captionDuration = (action['duration'] as num?)?.toDouble() ?? 3.0;
+            final textLayer = TextLayer.create(
+              text: captionText,
+              startTime: captionStart,
+              duration: captionDuration,
+            ).copyWith(isSubtitle: true);
+            currentTimeline = currentTimeline.copyWith(
+              textLayers: [...currentTimeline.textLayers, textLayer],
+            );
+          }
           break;
           
         case 'apply_motion_tracking':
-          final clipId = action['clipId'] as String;
+          final clipId = action['clipId'] as String?
+              ?? action['target'] as String?;
           final effect = VideoEffect.create(
             type: EffectType.motionTracking,
             parameters: action['parameters'] as Map<String, dynamic>? ?? {},
           );
-          final idx = currentTimeline.videoClips
-              .indexWhere((c) => c.id == clipId);
-          if (idx >= 0) {
-            final clip = currentTimeline.videoClips[idx];
-            final newClips = [...currentTimeline.videoClips];
-            newClips[idx] = clip.copyWith(effects: [...clip.effects, effect]);
-            currentTimeline = currentTimeline.copyWith(videoClips: newClips);
+          if (clipId != null) {
+            final idx = currentTimeline.videoClips
+                .indexWhere((c) => c.id == clipId);
+            if (idx >= 0) {
+              final clip = currentTimeline.videoClips[idx];
+              final newClips = [...currentTimeline.videoClips];
+              newClips[idx] = clip.copyWith(effects: [...clip.effects, effect]);
+              currentTimeline = currentTimeline.copyWith(videoClips: newClips);
+            }
           }
           break;
           
         case 'add_text_caption':
-          final text = action['text'] as String;
-          final startTime = (action['startTime'] as num).toDouble();
+          final text = action['text'] as String? ?? 'Caption';
+          final startTime = (action['startTime'] as num?)?.toDouble() ?? 0.0;
           final duration = (action['duration'] as num?)?.toDouble() ?? 3.0;
           final textLayer = TextLayer.create(
             text: text,
@@ -376,6 +530,9 @@ class EditorCubit extends Cubit<EditorState> {
             textLayers: [...currentTimeline.textLayers, textLayer],
           );
           break;
+        default:
+          // Action type غير مدعوم ضمن العقدة المعيارية للذكاء الاصطناعي.
+          continue;
       }
     }
     

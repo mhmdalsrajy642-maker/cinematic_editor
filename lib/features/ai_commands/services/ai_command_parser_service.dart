@@ -1,7 +1,6 @@
 // lib/features/ai_commands/services/ai_command_parser_service.dart
 // هذه الخدمة تأخذ الأمر النصي وتحوله إلى قائمة JSON Actions
 // تستخدم API الذكاء الاصطناعي لفهم الأمر المركب
-import 'dart:convert';
 import 'package:dio/dio.dart';
 import '../../../core/models/timeline_models.dart';
 import '../../../shared/constants/app_constants.dart';
@@ -36,7 +35,7 @@ class AiCommandParserService {
       return actionsList
           .map((action) => action as Map<String, dynamic>)
           .toList();
-    } on DioException catch (e) {
+    } on DioException catch (_) {
       // إذا فشل الاتصال بالسيرفر، استخدم المعالجة المحلية
       return await _parseCommandLocally(command, timelineState);
     }
@@ -67,7 +66,7 @@ class AiCommandParserService {
         lowerCommand.contains('ازل الخلفية')) {
       actions.add({
         'type': 'remove_background',
-        'target': _getFirstVideoClipId(timelineState),
+        'clipId': _getFirstVideoClipId(timelineState),
         'parameters': {
           'method': 'ai_segmentation',
           'model': 'mediapipe_selfie',
@@ -77,7 +76,9 @@ class AiCommandParserService {
     // ====== كشف أوامر الترجمة التلقائية ======
     if (lowerCommand.contains('ترجمة') ||
         lowerCommand.contains('subtitle') ||
-        lowerCommand.contains('caption')) {
+        lowerCommand.contains('caption') ||
+        lowerCommand.contains('توليد تسميات') ||
+        lowerCommand.contains('ترجمة تلقائية')) {
       actions.add({
         'type': 'generate_captions',
         'target': 'all_clips',
@@ -101,7 +102,8 @@ class AiCommandParserService {
     }
     // ====== كشف أوامر تتبع الحركة ======
     if (lowerCommand.contains('تتبع') ||
-        lowerCommand.contains('motion tracking')) {
+        lowerCommand.contains('motion tracking') ||
+        lowerCommand.contains('تتبع الحركة')) {
       actions.add({
         'type': 'apply_motion_tracking',
         'clipId': _getFirstVideoClipId(timelineState) ?? '',
@@ -111,9 +113,23 @@ class AiCommandParserService {
         },
       });
     }
+    // ====== كشف أوامر إضافة التسميات النصية ======
+    if (lowerCommand.contains('أضف نص') ||
+        lowerCommand.contains('أضف تعليق') ||
+        lowerCommand.contains('نص توضيحي') ||
+        lowerCommand.contains('text caption') ||
+        lowerCommand.contains('أضف تسمية')) {
+      actions.add({
+        'type': 'add_text_caption',
+        'text': 'Caption',
+        'startTime': 0.0,
+        'duration': 3.0,
+      });
+    }
     // ====== كشف أوامر إضافة الموسيقى ======
     if (lowerCommand.contains('موسيقى') ||
-        lowerCommand.contains('music')) {
+        lowerCommand.contains('music') ||
+        lowerCommand.contains('مقطوعة')) {
       actions.add({
         'type': 'add_music',
         'parameters': {

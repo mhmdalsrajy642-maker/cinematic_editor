@@ -1,29 +1,29 @@
 // lib/core/models/timeline_models.dart
 // هذا الملف يحدد بنية البيانات الكاملة للتايم لاين
 // كل عملية تعديل في التطبيق تُحوَّل إلى هذه النماذج وتُحفظ كـ JSON
-import 'package:flutter/material.dart';
 import 'package:equatable/equatable.dart';
 import 'package:uuid/uuid.dart';
+
 // ====================================================
 // نموذج مقطع الفيديو (Video Clip)
 // يمثل أي مقطع فيديو أو صورة على التايم لاين
 // ====================================================
 class VideoClip extends Equatable {
-  final String id;                    // معرف فريد لكل مقطع
-  final String originalPath;          // مسار الملف الأصلي (4K)
-  final String proxyPath;             // مسار النسخة الخفيفة (360p)
-  final double startTime;             // وقت البداية على التايم لاين (بالثانية)
-  final double endTime;               // وقت النهاية على التايم لاين (بالثانية)
-  final double clipStartOffset;       // نقطة البداية داخل الملف الأصلي
-  final double clipEndOffset;         // نقطة النهاية داخل الملف الأصلي
-  final int trackIndex;               // رقم المسار (0 = مسار الفيديو الرئيسي)
-  final double volume;                // مستوى الصوت (0.0 إلى 1.0)
-  final double speed;                 // سرعة التشغيل (1.0 = عادي، 2.0 = ضعفين)
-  final List<VideoEffect> effects;    // قائمة التأثيرات المطبقة
-  final VideoTransform transform;     // تحويلات الحجم والموضع والدوران
-  final String? thumbnailPath;        // مسار الصورة المصغرة للتايم لاين
-  final bool isMuted;                 // هل الصوت مكتوم؟
-  final ClipType clipType;            // نوع المقطع (فيديو، صورة، لون)
+  final String id; // معرف فريد لكل مقطع
+  final String originalPath; // مسار الملف الأصلي (4K)
+  final String proxyPath; // مسار النسخة الخفيفة (360p)
+  final double startTime; // وقت البداية على التايم لاين (بالثانية)
+  final double endTime; // وقت النهاية على التايم لاين (بالثانية)
+  final double clipStartOffset; // نقطة البداية داخل الملف الأصلي
+  final double clipEndOffset; // نقطة النهاية داخل الملف الأصلي
+  final int trackIndex; // رقم المسار (0 = مسار الفيديو الرئيسي)
+  final double volume; // مستوى الصوت (0.0 إلى 1.0)
+  final double speed; // سرعة التشغيل (1.0 = عادي، 2.0 = ضعفين)
+  final List<VideoEffect> effects; // قائمة التأثيرات المطبقة
+  final VideoTransform transform; // تحويلات الحجم والموضع والدوران
+  final String? thumbnailPath; // مسار الصورة المصغرة للتايم لاين
+  final bool isMuted; // هل الصوت مكتوم؟
+  final ClipType clipType; // نوع المقطع (فيديو، صورة، لون)
   const VideoClip({
     required this.id,
     required this.originalPath,
@@ -101,6 +101,7 @@ class VideoClip extends Equatable {
       clipType: clipType ?? this.clipType,
     );
   }
+
   // تحويل إلى JSON للحفظ
   Map<String, dynamic> toJson() {
     return {
@@ -121,6 +122,7 @@ class VideoClip extends Equatable {
       'clipType': clipType.name,
     };
   }
+
   // إنشاء من JSON
   factory VideoClip.fromJson(Map<String, dynamic> json) {
     return VideoClip(
@@ -137,8 +139,8 @@ class VideoClip extends Equatable {
       effects: (json['effects'] as List)
           .map((e) => VideoEffect.fromJson(e as Map<String, dynamic>))
           .toList(),
-      transform: VideoTransform.fromJson(
-          json['transform'] as Map<String, dynamic>),
+      transform:
+          VideoTransform.fromJson(json['transform'] as Map<String, dynamic>),
       thumbnailPath: json['thumbnailPath'] as String?,
       isMuted: json['isMuted'] as bool,
       clipType: ClipType.values.byName(json['clipType'] as String),
@@ -146,25 +148,39 @@ class VideoClip extends Equatable {
   }
   @override
   List<Object?> get props => [
-        id, originalPath, proxyPath, startTime, endTime,
-        clipStartOffset, clipEndOffset, trackIndex, volume,
-        speed, effects, transform, thumbnailPath, isMuted, clipType,
+        id,
+        originalPath,
+        proxyPath,
+        startTime,
+        endTime,
+        clipStartOffset,
+        clipEndOffset,
+        trackIndex,
+        volume,
+        speed,
+        effects,
+        transform,
+        thumbnailPath,
+        isMuted,
+        clipType,
       ];
 }
+
 // ====================================================
 // نوع المقطع
 // ====================================================
 enum ClipType { video, image, solidColor }
+
 // ====================================================
 // نموذج تحويلات الفيديو (الحجم، الموضع، الدوران)
 // ====================================================
 class VideoTransform extends Equatable {
-  final double x;           // الموضع الأفقي
-  final double y;           // الموضع الرأسي
-  final double scaleX;      // الحجم الأفقي
-  final double scaleY;      // الحجم الرأسي
-  final double rotation;    // الدوران بالدرجات
-  final double opacity;     // الشفافية (0.0 إلى 1.0)
+  final double x; // الموضع الأفقي
+  final double y; // الموضع الرأسي
+  final double scaleX; // الحجم الأفقي
+  final double scaleY; // الحجم الرأسي
+  final double rotation; // الدوران بالدرجات
+  final double opacity; // الشفافية (0.0 إلى 1.0)
   const VideoTransform({
     required this.x,
     required this.y,
@@ -176,15 +192,22 @@ class VideoTransform extends Equatable {
   // قيم محايدة (لا تغيير)
   factory VideoTransform.identity() {
     return const VideoTransform(
-      x: 0.0, y: 0.0,
-      scaleX: 1.0, scaleY: 1.0,
-      rotation: 0.0, opacity: 1.0,
+      x: 0.0,
+      y: 0.0,
+      scaleX: 1.0,
+      scaleY: 1.0,
+      rotation: 0.0,
+      opacity: 1.0,
     );
   }
   Map<String, dynamic> toJson() => {
-    'x': x, 'y': y, 'scaleX': scaleX, 'scaleY': scaleY,
-    'rotation': rotation, 'opacity': opacity,
-  };
+        'x': x,
+        'y': y,
+        'scaleX': scaleX,
+        'scaleY': scaleY,
+        'rotation': rotation,
+        'opacity': opacity,
+      };
   factory VideoTransform.fromJson(Map<String, dynamic> json) {
     return VideoTransform(
       x: (json['x'] as num).toDouble(),
@@ -196,25 +219,34 @@ class VideoTransform extends Equatable {
     );
   }
   VideoTransform copyWith({
-    double? x, double? y, double? scaleX, double? scaleY,
-    double? rotation, double? opacity,
+    double? x,
+    double? y,
+    double? scaleX,
+    double? scaleY,
+    double? rotation,
+    double? opacity,
   }) {
     return VideoTransform(
-      x: x ?? this.x, y: y ?? this.y,
-      scaleX: scaleX ?? this.scaleX, scaleY: scaleY ?? this.scaleY,
-      rotation: rotation ?? this.rotation, opacity: opacity ?? this.opacity,
+      x: x ?? this.x,
+      y: y ?? this.y,
+      scaleX: scaleX ?? this.scaleX,
+      scaleY: scaleY ?? this.scaleY,
+      rotation: rotation ?? this.rotation,
+      opacity: opacity ?? this.opacity,
     );
   }
+
   @override
   List<Object?> get props => [x, y, scaleX, scaleY, rotation, opacity];
 }
+
 // ====================================================
 // نموذج التأثيرات (Effects)
 // ====================================================
 class VideoEffect extends Equatable {
   final String id;
   final EffectType type;
-  final Map<String, dynamic> parameters;   // معاملات التأثير (مرونة كاملة)
+  final Map<String, dynamic> parameters; // معاملات التأثير (مرونة كاملة)
   final bool isEnabled;
   const VideoEffect({
     required this.id,
@@ -233,11 +265,11 @@ class VideoEffect extends Equatable {
     );
   }
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'type': type.name,
-    'parameters': parameters,
-    'isEnabled': isEnabled,
-  };
+        'id': id,
+        'type': type.name,
+        'parameters': parameters,
+        'isEnabled': isEnabled,
+      };
   factory VideoEffect.fromJson(Map<String, dynamic> json) {
     return VideoEffect(
       id: json['id'] as String,
@@ -247,8 +279,10 @@ class VideoEffect extends Equatable {
     );
   }
   VideoEffect copyWith({
-    String? id, EffectType? type,
-    Map<String, dynamic>? parameters, bool? isEnabled,
+    String? id,
+    EffectType? type,
+    Map<String, dynamic>? parameters,
+    bool? isEnabled,
   }) {
     return VideoEffect(
       id: id ?? this.id,
@@ -257,43 +291,46 @@ class VideoEffect extends Equatable {
       isEnabled: isEnabled ?? this.isEnabled,
     );
   }
+
   @override
   List<Object?> get props => [id, type, parameters, isEnabled];
 }
+
 // أنواع التأثيرات المتاحة
 enum EffectType {
-  colorGrade,         // تصحيح الألوان
-  blur,               // ضبابية
-  sharpen,            // حدة
-  brightness,         // سطوع
-  contrast,           // تباين
-  saturation,         // تشبع
-  temperature,        // درجة الحرارة اللونية
-  vignette,           // تعتيم الحواف
-  filmGrain,          // حبيبات الفيلم
-  glitch,             // تأثير التشويش
-  chromaKey,          // إزالة الخلفية بالكروما
-  backgroundRemoval,  // إزالة الخلفية بالذكاء الاصطناعي
-  motionTracking,     // تتبع الحركة
-  stabilization,      // تثبيت الصورة
-  speedRamp,          // تغيير سرعة ديناميكي
-  lumaKey,            // مفتاح السطوع
+  colorGrade, // تصحيح الألوان
+  blur, // ضبابية
+  sharpen, // حدة
+  brightness, // سطوع
+  contrast, // تباين
+  saturation, // تشبع
+  temperature, // درجة الحرارة اللونية
+  vignette, // تعتيم الحواف
+  filmGrain, // حبيبات الفيلم
+  glitch, // تأثير التشويش
+  chromaKey, // إزالة الخلفية بالكروما
+  backgroundRemoval, // إزالة الخلفية بالذكاء الاصطناعي
+  motionTracking, // تتبع الحركة
+  stabilization, // تثبيت الصورة
+  speedRamp, // تغيير سرعة ديناميكي
+  lumaKey, // مفتاح السطوع
 }
+
 // ====================================================
 // نموذج مقطع الصوت (Audio Clip)
 // ====================================================
 class AudioClip extends Equatable {
   final String id;
   final String filePath;
-  final double startTime;       // وقت البداية على التايم لاين
-  final double endTime;         // وقت النهاية على التايم لاين
-  final double audioOffset;     // نقطة البداية داخل الملف الصوتي
-  final double volume;          // مستوى الصوت
-  final double fadeInDuration;  // مدة الـ Fade In
+  final double startTime; // وقت البداية على التايم لاين
+  final double endTime; // وقت النهاية على التايم لاين
+  final double audioOffset; // نقطة البداية داخل الملف الصوتي
+  final double volume; // مستوى الصوت
+  final double fadeInDuration; // مدة الـ Fade In
   final double fadeOutDuration; // مدة الـ Fade Out
-  final int trackIndex;         // رقم مسار الصوت
+  final int trackIndex; // رقم مسار الصوت
   final bool isMuted;
-  final AudioType audioType;    // نوع الصوت
+  final AudioType audioType; // نوع الصوت
   const AudioClip({
     required this.id,
     required this.filePath,
@@ -326,13 +363,18 @@ class AudioClip extends Equatable {
   }
   double get duration => endTime - startTime;
   Map<String, dynamic> toJson() => {
-    'id': id, 'filePath': filePath,
-    'startTime': startTime, 'endTime': endTime,
-    'audioOffset': audioOffset, 'volume': volume,
-    'fadeInDuration': fadeInDuration, 'fadeOutDuration': fadeOutDuration,
-    'trackIndex': trackIndex, 'isMuted': isMuted,
-    'audioType': audioType.name,
-  };
+        'id': id,
+        'filePath': filePath,
+        'startTime': startTime,
+        'endTime': endTime,
+        'audioOffset': audioOffset,
+        'volume': volume,
+        'fadeInDuration': fadeInDuration,
+        'fadeOutDuration': fadeOutDuration,
+        'trackIndex': trackIndex,
+        'isMuted': isMuted,
+        'audioType': audioType.name,
+      };
   factory AudioClip.fromJson(Map<String, dynamic> json) {
     return AudioClip(
       id: json['id'] as String,
@@ -340,22 +382,36 @@ class AudioClip extends Equatable {
       startTime: (json['startTime'] as num).toDouble(),
       endTime: (json['endTime'] as num).toDouble(),
       audioOffset: (json['audioOffset'] as num).toDouble(),
-      volume: (json['volume'] as num).toDouble(),
-      fadeInDuration: (json['fadeInDuration'] as num).toDouble(),
-      fadeOutDuration: (json['fadeOutDuration'] as num).toDouble(),
+      volume: json['volume'] != null ? (json['volume'] as num).toDouble() : 1.0,
+      fadeInDuration: json['fadeInDuration'] != null
+          ? (json['fadeInDuration'] as num).toDouble()
+          : 0.0,
+      fadeOutDuration: json['fadeOutDuration'] != null
+          ? (json['fadeOutDuration'] as num).toDouble()
+          : 0.0,
       trackIndex: json['trackIndex'] as int,
-      isMuted: json['isMuted'] as bool,
-      audioType: AudioType.values.byName(json['audioType'] as String),
+      isMuted: json['isMuted'] as bool? ?? false,
+      audioType: json['audioType'] != null
+          ? AudioType.values.byName(json['audioType'] as String)
+          : AudioType.music,
     );
   }
   AudioClip copyWith({
-    String? id, String? filePath,
-    double? startTime, double? endTime, double? audioOffset,
-    double? volume, double? fadeInDuration, double? fadeOutDuration,
-    int? trackIndex, bool? isMuted, AudioType? audioType,
+    String? id,
+    String? filePath,
+    double? startTime,
+    double? endTime,
+    double? audioOffset,
+    double? volume,
+    double? fadeInDuration,
+    double? fadeOutDuration,
+    int? trackIndex,
+    bool? isMuted,
+    AudioType? audioType,
   }) {
     return AudioClip(
-      id: id ?? this.id, filePath: filePath ?? this.filePath,
+      id: id ?? this.id,
+      filePath: filePath ?? this.filePath,
       startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,
       audioOffset: audioOffset ?? this.audioOffset,
@@ -367,13 +423,78 @@ class AudioClip extends Equatable {
       audioType: audioType ?? this.audioType,
     );
   }
+
   @override
   List<Object?> get props => [
-    id, filePath, startTime, endTime, audioOffset,
-    volume, fadeInDuration, fadeOutDuration, trackIndex, isMuted, audioType,
-  ];
+        id,
+        filePath,
+        startTime,
+        endTime,
+        audioOffset,
+        volume,
+        fadeInDuration,
+        fadeOutDuration,
+        trackIndex,
+        isMuted,
+        audioType,
+      ];
 }
+
 enum AudioType { music, voiceOver, soundEffect, videoAudio }
+
+// ====================================================
+// نموذج تنسيق النص القابل للتسلسل
+// هذا النموذج يفصل بيانات النص عن Flutter UI
+// ====================================================
+class TextStyleDto extends Equatable {
+  final int color;
+  final double fontSize;
+  final int fontWeight;
+
+  const TextStyleDto({
+    required this.color,
+    required this.fontSize,
+    required this.fontWeight,
+  });
+
+  factory TextStyleDto.defaultStyle() {
+    return const TextStyleDto(
+      color: 0xFFFFFFFF,
+      fontSize: 24.0,
+      fontWeight: 6,
+    );
+  }
+
+  TextStyleDto copyWith({
+    int? color,
+    double? fontSize,
+    int? fontWeight,
+  }) {
+    return TextStyleDto(
+      color: color ?? this.color,
+      fontSize: fontSize ?? this.fontSize,
+      fontWeight: fontWeight ?? this.fontWeight,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'color': color,
+        'fontSize': fontSize,
+        'fontWeight': fontWeight,
+      };
+
+  factory TextStyleDto.fromJson(Map<String, dynamic> json) {
+    return TextStyleDto(
+      color: json['color'] as int,
+      fontSize: (json['fontSize'] as num).toDouble(),
+      fontWeight: json['fontWeight'] as int,
+    );
+  }
+
+  @override
+  List<Object?> get props => [color, fontSize, fontWeight];
+}
+
 // ====================================================
 // نموذج طبقة النص (Text Layer)
 // ====================================================
@@ -382,10 +503,10 @@ class TextLayer extends Equatable {
   final String text;
   final double startTime;
   final double endTime;
-  final TextStyle style;          // تنسيق النص
+  final TextStyleDto style; // تنسيق النص القابل للتسلسل
   final VideoTransform transform; // موضع وحجم النص
-  final TextAnimation animation;  // حركة دخول وخروج النص
-  final bool isSubtitle;          // هل هو ترجمة تلقائية؟
+  final TextAnimation animation; // حركة دخول وخروج النص
+  final bool isSubtitle; // هل هو ترجمة تلقائية؟
   const TextLayer({
     required this.id,
     required this.text,
@@ -406,55 +527,72 @@ class TextLayer extends Equatable {
       text: text,
       startTime: startTime,
       endTime: startTime + duration,
-      style: const TextStyle(
-        color: Color(0xFFFFFFFF),
-        fontSize: 24,
-        fontWeight: FontWeight.bold,
-      ),
+      style: TextStyleDto.defaultStyle(),
       transform: VideoTransform(
-        x: 0, y: 0.8,
-        scaleX: 1.0, scaleY: 1.0,
-        rotation: 0.0, opacity: 1.0,
+        x: 0,
+        y: 0.8,
+        scaleX: 1.0,
+        scaleY: 1.0,
+        rotation: 0.0,
+        opacity: 1.0,
       ),
       animation: TextAnimation.fadeIn,
     );
   }
   double get duration => endTime - startTime;
   Map<String, dynamic> toJson() => {
-    'id': id, 'text': text,
-    'startTime': startTime, 'endTime': endTime,
-    'styleColor': style.color?.value,
-    'styleFontSize': style.fontSize,
-    'styleFontWeight': style.fontWeight?.index,
-    'transform': transform.toJson(),
-    'animation': animation.name,
-    'isSubtitle': isSubtitle,
-  };
+        'id': id,
+        'text': text,
+        'startTime': startTime,
+        'endTime': endTime,
+        'style': style.toJson(),
+        'styleColor': style.color,
+        'styleFontSize': style.fontSize,
+        'styleFontWeight': style.fontWeight,
+        'transform': transform.toJson(),
+        'animation': animation.name,
+        'isSubtitle': isSubtitle,
+      };
   factory TextLayer.fromJson(Map<String, dynamic> json) {
+    final styleJson = json['style'] as Map<String, dynamic>?;
+    final style = styleJson != null
+        ? TextStyleDto.fromJson(styleJson)
+        : TextStyleDto(
+            color: json['styleColor'] is int
+                ? json['styleColor'] as int
+                : 0xFFFFFFFF,
+            fontSize: json['styleFontSize'] != null
+                ? (json['styleFontSize'] as num).toDouble()
+                : 24.0,
+            fontWeight: json['styleFontWeight'] is int
+                ? json['styleFontWeight'] as int
+                : 6,
+          );
     return TextLayer(
       id: json['id'] as String,
       text: json['text'] as String,
       startTime: (json['startTime'] as num).toDouble(),
       endTime: (json['endTime'] as num).toDouble(),
-      style: TextStyle(
-        color: Color(json['styleColor'] as int),
-        fontSize: (json['styleFontSize'] as num).toDouble(),
-        fontWeight: FontWeight.values[json['styleFontWeight'] as int],
-      ),
-      transform: VideoTransform.fromJson(
-          json['transform'] as Map<String, dynamic>),
+      style: style,
+      transform:
+          VideoTransform.fromJson(json['transform'] as Map<String, dynamic>),
       animation: TextAnimation.values.byName(json['animation'] as String),
       isSubtitle: json['isSubtitle'] as bool,
     );
   }
   TextLayer copyWith({
-    String? id, String? text,
-    double? startTime, double? endTime,
-    TextStyle? style, VideoTransform? transform,
-    TextAnimation? animation, bool? isSubtitle,
+    String? id,
+    String? text,
+    double? startTime,
+    double? endTime,
+    TextStyleDto? style,
+    VideoTransform? transform,
+    TextAnimation? animation,
+    bool? isSubtitle,
   }) {
     return TextLayer(
-      id: id ?? this.id, text: text ?? this.text,
+      id: id ?? this.id,
+      text: text ?? this.text,
       startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,
       style: style ?? this.style,
@@ -463,12 +601,30 @@ class TextLayer extends Equatable {
       isSubtitle: isSubtitle ?? this.isSubtitle,
     );
   }
+
   @override
   List<Object?> get props => [
-    id, text, startTime, endTime, style, transform, animation, isSubtitle,
-  ];
+        id,
+        text,
+        startTime,
+        endTime,
+        style,
+        transform,
+        animation,
+        isSubtitle,
+      ];
 }
-enum TextAnimation { none, fadeIn, fadeOut, fadeInOut, slideIn, typewriter, pop }
+
+enum TextAnimation {
+  none,
+  fadeIn,
+  fadeOut,
+  fadeInOut,
+  slideIn,
+  typewriter,
+  pop
+}
+
 // ====================================================
 // نموذج حالة التايم لاين (Timeline State)
 // هذا هو الـ JSON الذي يُحفظ لكل عملية Undo/Redo
@@ -479,8 +635,8 @@ class TimelineState extends Equatable {
   final List<AudioClip> audioClips;
   final List<TextLayer> textLayers;
   final double totalDuration;
-  final int videoTrackCount;     // عدد مسارات الفيديو
-  final int audioTrackCount;     // عدد مسارات الصوت
+  final int videoTrackCount; // عدد مسارات الفيديو
+  final int audioTrackCount; // عدد مسارات الصوت
   final ProjectSettings settings;
   const TimelineState({
     required this.projectId,
@@ -515,33 +671,37 @@ class TimelineState extends Equatable {
     }
     return maxTime;
   }
+
   Map<String, dynamic> toJson() => {
-    'projectId': projectId,
-    'videoClips': videoClips.map((c) => c.toJson()).toList(),
-    'audioClips': audioClips.map((c) => c.toJson()).toList(),
-    'textLayers': textLayers.map((t) => t.toJson()).toList(),
-    'totalDuration': totalDuration,
-    'videoTrackCount': videoTrackCount,
-    'audioTrackCount': audioTrackCount,
-    'settings': settings.toJson(),
-  };
+        'projectId': projectId,
+        'videoClips': videoClips.map((c) => c.toJson()).toList(),
+        'audioClips': audioClips.map((c) => c.toJson()).toList(),
+        'textLayers': textLayers.map((t) => t.toJson()).toList(),
+        'totalDuration': totalDuration,
+        'videoTrackCount': videoTrackCount,
+        'audioTrackCount': audioTrackCount,
+        'settings': settings.toJson(),
+      };
   factory TimelineState.fromJson(Map<String, dynamic> json) {
     return TimelineState(
       projectId: json['projectId'] as String,
-      videoClips: (json['videoClips'] as List)
+      videoClips: (json['videoClips'] as List? ?? const [])
           .map((c) => VideoClip.fromJson(c as Map<String, dynamic>))
           .toList(),
-      audioClips: (json['audioClips'] as List)
+      audioClips: (json['audioClips'] as List? ?? const [])
           .map((c) => AudioClip.fromJson(c as Map<String, dynamic>))
           .toList(),
-      textLayers: (json['textLayers'] as List)
+      textLayers: (json['textLayers'] as List? ?? const [])
           .map((t) => TextLayer.fromJson(t as Map<String, dynamic>))
           .toList(),
-      totalDuration: (json['totalDuration'] as num).toDouble(),
-      videoTrackCount: json['videoTrackCount'] as int,
-      audioTrackCount: json['audioTrackCount'] as int,
-      settings: ProjectSettings.fromJson(
-          json['settings'] as Map<String, dynamic>),
+      totalDuration: json['totalDuration'] != null
+          ? (json['totalDuration'] as num).toDouble()
+          : 0.0,
+      videoTrackCount: json['videoTrackCount'] as int? ?? 2,
+      audioTrackCount: json['audioTrackCount'] as int? ?? 3,
+      settings: json['settings'] != null
+          ? ProjectSettings.fromJson(json['settings'] as Map<String, dynamic>)
+          : ProjectSettings.defaultSettings(),
     );
   }
   TimelineState copyWith({
@@ -565,20 +725,28 @@ class TimelineState extends Equatable {
       settings: settings ?? this.settings,
     );
   }
+
   @override
   List<Object?> get props => [
-    projectId, videoClips, audioClips, textLayers,
-    totalDuration, videoTrackCount, audioTrackCount, settings,
-  ];
+        projectId,
+        videoClips,
+        audioClips,
+        textLayers,
+        totalDuration,
+        videoTrackCount,
+        audioTrackCount,
+        settings,
+      ];
 }
+
 // ====================================================
 // إعدادات المشروع
 // ====================================================
 class ProjectSettings extends Equatable {
-  final String resolution;      // "4K", "1080p", "720p"
-  final double frameRate;       // 24, 30, 60
-  final String aspectRatio;     // "16:9", "9:16", "1:1", "4:3"
-  final String colorProfile;    // "sRGB", "HDR10", "Rec.2020"
+  final String resolution; // "4K", "1080p", "720p"
+  final double frameRate; // 24, 30, 60
+  final String aspectRatio; // "16:9", "9:16", "1:1", "4:3"
+  final String colorProfile; // "sRGB", "HDR10", "Rec.2020"
   const ProjectSettings({
     required this.resolution,
     required this.frameRate,
@@ -589,16 +757,16 @@ class ProjectSettings extends Equatable {
     return const ProjectSettings(
       resolution: '1080p',
       frameRate: 30.0,
-      aspectRatio: '9:16',     // الوضع الرأسي للهاتف افتراضياً
+      aspectRatio: '9:16', // الوضع الرأسي للهاتف افتراضياً
       colorProfile: 'sRGB',
     );
   }
   Map<String, dynamic> toJson() => {
-    'resolution': resolution,
-    'frameRate': frameRate,
-    'aspectRatio': aspectRatio,
-    'colorProfile': colorProfile,
-  };
+        'resolution': resolution,
+        'frameRate': frameRate,
+        'aspectRatio': aspectRatio,
+        'colorProfile': colorProfile,
+      };
   factory ProjectSettings.fromJson(Map<String, dynamic> json) {
     return ProjectSettings(
       resolution: json['resolution'] as String,
