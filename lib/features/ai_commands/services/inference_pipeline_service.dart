@@ -6,9 +6,11 @@
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import '../../../core/models/timeline_models.dart';
+import '../audio/services/auto_caption_service.dart';
 import 'ai_command_parser_service.dart';
 import 'local_ai_engine.dart';
 import 'background_removal_service.dart';
+import 'model_download_service.dart';
 
 // ====================================================
 // Pipeline Status
@@ -20,6 +22,7 @@ enum AIInferenceStatus {
   parsingCommand,
   selectingModel,
   selectingBackend,
+  downloadingModel,
   loadingModel,
   runningInference,
   postProcessing,
@@ -161,6 +164,7 @@ class AIInferenceRequest {
 /// Strongly typed inference result for a single action
 class AIInferenceResult {
   final AIActionType actionType;
+  final String? targetClipId;
   final AIResultKind resultKind;
   final AIInferenceStatus status;
   final AIModelSelection modelUsed;
@@ -179,6 +183,7 @@ class AIInferenceResult {
 
   const AIInferenceResult({
     required this.actionType,
+    this.targetClipId,
     required this.resultKind,
     required this.status,
     this.modelUsed = AIModelSelection.none,
@@ -197,12 +202,14 @@ class AIInferenceResult {
 
   factory AIInferenceResult.dataOnly({
     required AIActionType actionType,
+    String? targetClipId,
     required VideoEffect? effect,
     List<TextLayer>? textLayers,
     AudioClip? audioClip,
   }) {
     return AIInferenceResult(
       actionType: actionType,
+      targetClipId: targetClipId,
       resultKind: AIResultKind.dataOnly,
       status: AIInferenceStatus.completed,
       inferenceTime: Duration.zero,
@@ -214,6 +221,7 @@ class AIInferenceResult {
 
   factory AIInferenceResult.inferred({
     required AIActionType actionType,
+    String? targetClipId,
     required AIModelSelection modelUsed,
     required SegmentationBackend backendUsed,
     required Duration inferenceTime,
@@ -223,6 +231,7 @@ class AIInferenceResult {
   }) {
     return AIInferenceResult(
       actionType: actionType,
+      targetClipId: targetClipId,
       resultKind: AIResultKind.inferred,
       status: AIInferenceStatus.completed,
       modelUsed: modelUsed,
@@ -236,11 +245,13 @@ class AIInferenceResult {
 
   factory AIInferenceResult.pendingInference({
     required AIActionType actionType,
+    String? targetClipId,
     required AIModelSelection modelSelection,
     required VideoEffect? effect,
   }) {
     return AIInferenceResult(
       actionType: actionType,
+      targetClipId: targetClipId,
       resultKind: AIResultKind.pendingInference,
       status: AIInferenceStatus.completed,
       modelUsed: modelSelection,
@@ -251,12 +262,14 @@ class AIInferenceResult {
 
   factory AIInferenceResult.failed({
     required AIActionType actionType,
+    String? targetClipId,
     required String errorMessage,
     AIModelSelection modelUsed = AIModelSelection.none,
     Duration inferenceTime = Duration.zero,
   }) {
     return AIInferenceResult(
       actionType: actionType,
+      targetClipId: targetClipId,
       resultKind: AIResultKind.dataOnly,
       status: AIInferenceStatus.failed,
       modelUsed: modelUsed,
@@ -330,15 +343,21 @@ class InferencePipelineService {
   final AiCommandParserService _parserService;
   final LocalAiEngine _aiEngine;
   final BackgroundRemovalService _backgroundRemovalService;
+  final ModelDownloadService _downloadService;
+  final AutoCaptionService _captionService;
   bool _isInitialized = false;
 
   InferencePipelineService({
     required AiCommandParserService parserService,
     required LocalAiEngine aiEngine,
     required BackgroundRemovalService backgroundRemovalService,
+    required ModelDownloadService downloadService,
+    AutoCaptionService? captionService,
   })  : _parserService = parserService,
         _aiEngine = aiEngine,
-        _backgroundRemovalService = backgroundRemovalService;
+        _backgroundRemovalService = backgroundRemovalService,
+        _downloadService = downloadService,
+        _captionService = captionService ?? AutoCaptionService();
 
   bool get isInitialized => _isInitialized;
 
@@ -351,7 +370,9 @@ class InferencePipelineService {
     if (_isInitialized) return;
 
     await _aiEngine.initialize();
+    await _downloadService.initialize();
     await _backgroundRemovalService.initialize();
+    await _captionService.initialize();
     _isInitialized = true;
     debugPrint('InferencePipelineService initialized');
   }
@@ -359,6 +380,7 @@ class InferencePipelineService {
   /// Shutdown all sub-services
   Future<void> shutdown() async {
     await _backgroundRemovalService.shutdown();
+    await _captionService.shutdown();
     await _aiEngine.shutdown();
     _isInitialized = false;
     debugPrint('InferencePipelineService shut down');
@@ -499,6 +521,7 @@ class InferencePipelineService {
       case AIActionType.applyColorGrade:
         return AIInferenceResult.dataOnly(
           actionType: request.actionType,
+          targetClipId: request.targetClipId,
           effect: VideoEffect.create(
             type: EffectType.colorGrade,
             parameters: request.parameters,
@@ -516,6 +539,7 @@ class InferencePipelineService {
             3.0;
         return AIInferenceResult.dataOnly(
           actionType: request.actionType,
+          targetClipId: request.targetClipId,
           textLayers: [
             TextLayer.create(
               text: text,
@@ -530,12 +554,14 @@ class InferencePipelineService {
         // or an external source — pipeline returns data-only placeholder
         return AIInferenceResult.dataOnly(
           actionType: request.actionType,
+          targetClipId: request.targetClipId,
           audioClip: null,
         );
 
       case AIActionType.reduceNoise:
         return AIInferenceResult.dataOnly(
           actionType: request.actionType,
+          targetClipId: request.targetClipId,
           effect: VideoEffect.create(
             type: EffectType.colorGrade, // Noise reduction uses audio, not video effect
             parameters: {'type': 'noise_reduction', ...request.parameters},
@@ -545,6 +571,7 @@ class InferencePipelineService {
       case AIActionType.speedRamp:
         return AIInferenceResult.dataOnly(
           actionType: request.actionType,
+          targetClipId: request.targetClipId,
           effect: VideoEffect.create(
             type: EffectType.speedRamp,
             parameters: request.parameters,
@@ -571,18 +598,15 @@ class InferencePipelineService {
   }) async {
     final stopwatch = Stopwatch()..start();
 
-    // Step 4: Load model if needed
-    onProgress?.call(AIInferenceProgress(
-      status: AIInferenceStatus.loadingModel,
-      actionType: request.actionType,
-      currentAction: actionIndex,
+    // Step 4: Prepare and load model if needed
+    final modelReady = await _prepareModelForInference(
+      request: request,
+      actionIndex: actionIndex,
       totalActions: totalActions,
-      detail: 'Loading model: ${request.modelSelection.name}',
-    ));
+      onProgress: onProgress,
+    );
 
-    final modelLoaded = await _ensureModelLoaded(request.modelSelection);
-    if (!modelLoaded) {
-      // Model not available — return pending result with metadata
+    if (!modelReady) {
       stopwatch.stop();
       return AIInferenceResult.pendingInference(
         actionType: request.actionType,
@@ -600,37 +624,36 @@ class InferencePipelineService {
       detail: 'Running ${request.modelSelection.name} inference',
     ));
 
-    AIInferenceResult result;
-
     switch (request.actionType) {
       case AIActionType.removeBackground:
-        result = await _executeBackgroundRemoval(
+        final removalResult = await _executeBackgroundRemoval(
           request: request,
           actionIndex: actionIndex,
           totalActions: totalActions,
           onProgress: onProgress,
         );
-
+        stopwatch.stop();
+        return removalResult;
       case AIActionType.generateCaptions:
-        result = await _executeCaptionGeneration(request: request);
-
+        final captionResult = await _executeCaptionGeneration(request: request);
+        stopwatch.stop();
+        return captionResult;
       case AIActionType.applyMotionTracking:
-        result = await _executeMotionTracking(request: request);
-
+        final motionResult = await _executeMotionTracking(request: request);
+        stopwatch.stop();
+        return motionResult;
       case AIActionType.stabilize:
-        result = await _executeStabilization(request: request);
-
+        final stabilizationResult = await _executeStabilization(request: request);
+        stopwatch.stop();
+        return stabilizationResult;
       default:
         stopwatch.stop();
-        result = AIInferenceResult.failed(
+        return AIInferenceResult.failed(
           actionType: request.actionType,
           errorMessage: 'No inference handler for ${request.actionType}',
           inferenceTime: stopwatch.elapsed,
         );
     }
-
-    stopwatch.stop();
-    return result;
   }
 
   // ====================================================
@@ -648,6 +671,7 @@ class InferencePipelineService {
     if (clipId == null) {
       return AIInferenceResult.failed(
         actionType: request.actionType,
+        targetClipId: request.targetClipId,
         errorMessage: 'No clip ID specified for background removal',
       );
     }
@@ -659,6 +683,7 @@ class InferencePipelineService {
     if (clip == null) {
       return AIInferenceResult.failed(
         actionType: request.actionType,
+        targetClipId: clipId,
         errorMessage: 'Clip not found: $clipId',
       );
     }
@@ -698,6 +723,7 @@ class InferencePipelineService {
 
     return AIInferenceResult.inferred(
       actionType: request.actionType,
+      targetClipId: request.targetClipId,
       modelUsed: request.modelSelection,
       backendUsed: _backgroundRemovalService.activeBackendType,
       inferenceTime: clipResult.totalProcessingTime,
@@ -710,17 +736,46 @@ class InferencePipelineService {
   Future<AIInferenceResult> _executeCaptionGeneration({
     required AIInferenceRequest request,
   }) async {
-    // Caption generation requires:
-    // 1. Audio extraction from video (FFmpeg)
-    // 2. Whisper tiny model inference
-    // 3. Timestamp alignment
-    // 4. TextLayer generation
-    // All steps are architecture stubs pending model availability.
+    final captionRequest = CaptionRequest(
+      requestId: request.targetClipId ?? request.rawCommand,
+      audioSource: request.parameters['audioSource'] as String? ??
+          request.targetClipId ??
+          request.rawCommand,
+      languageCode: request.parameters['language'] as String? ?? 'en-US',
+      includeTimestamps:
+          request.parameters['includeTimestamps'] as bool? ?? true,
+      metadata: request.parameters['metadata'] as Map<String, dynamic>?,
+    );
 
-    return AIInferenceResult.pendingInference(
+    final captionResult = await _captionService.generateCaptions(captionRequest);
+    if (!captionResult.success) {
+      return AIInferenceResult.failed(
+        actionType: request.actionType,
+        targetClipId: request.targetClipId,
+        errorMessage: captionResult.message ?? 'Caption generation failed',
+      );
+    }
+
+    final textLayers = <TextLayer>[];
+    if (captionResult.segments != null && captionResult.segments!.isNotEmpty) {
+      for (final segment in captionResult.segments!) {
+        textLayers.add(TextLayer.create(
+          text: segment.text,
+          startTime: segment.startTime,
+          duration: (segment.endTime - segment.startTime).clamp(0.1, 10.0),
+        ));
+      }
+    } else if (captionResult.transcript != null) {
+      textLayers.add(TextLayer.create(
+        text: captionResult.transcript!,
+        startTime: 0.0,
+      ));
+    }
+
+    return AIInferenceResult.dataOnly(
       actionType: request.actionType,
-      modelSelection: AIModelSelection.whisperTiny,
-      effect: null,
+      targetClipId: request.targetClipId,
+      textLayers: textLayers,
     );
   }
 
@@ -744,6 +799,7 @@ class InferencePipelineService {
 
     return AIInferenceResult.pendingInference(
       actionType: request.actionType,
+      targetClipId: request.targetClipId,
       modelSelection: AIModelSelection.motionTracking,
       effect: VideoEffect.create(
         type: EffectType.motionTracking,
@@ -760,6 +816,7 @@ class InferencePipelineService {
     // but applies inverse transforms instead of tracking data.
     return AIInferenceResult.pendingInference(
       actionType: request.actionType,
+      targetClipId: request.targetClipId,
       modelSelection: AIModelSelection.motionTracking,
       effect: VideoEffect.create(
         type: EffectType.stabilization,
@@ -787,6 +844,115 @@ class InferencePipelineService {
     } catch (e) {
       debugPrint('InferencePipelineService: model load failed: $e');
       return false;
+    }
+  }
+
+  Future<bool> _prepareModelForInference({
+    required AIInferenceRequest request,
+    required int actionIndex,
+    required int totalActions,
+    AIProgressCallback? onProgress,
+  }) async {
+    final modelId = _modelIdForSelection(request.modelSelection);
+    if (modelId == null) {
+      return false;
+    }
+
+    final downloadResult = await _downloadService.ensureModelAvailable(
+      modelId,
+      onProgress: (progress) {
+        final detail = _downloadProgressDetail(progress);
+        onProgress?.call(AIInferenceProgress(
+          status: AIInferenceStatus.downloadingModel,
+          actionType: request.actionType,
+          currentAction: actionIndex,
+          totalActions: totalActions,
+          detail: detail,
+        ));
+      },
+    );
+
+    if (!downloadResult.success) {
+      debugPrint(
+        'InferencePipelineService: model download/availability failed for '
+        '$modelId -> ${downloadResult.errorMessage}',
+      );
+      return false;
+    }
+
+    if (downloadResult.loadedIntoEngine) {
+      return true;
+    }
+
+    if (downloadResult.localPath != null) {
+      return await _loadDownloadedModel(request.modelSelection, downloadResult.localPath!);
+    }
+
+    return await _ensureModelLoaded(request.modelSelection);
+  }
+
+  Future<bool> _loadDownloadedModel(
+    AIModelSelection model,
+    String localPath,
+  ) async {
+    if (!_aiEngine.isInitialized) return false;
+
+    final modelId = _modelIdForSelection(model);
+    if (modelId == null) return false;
+
+    if (_aiEngine.isModelLoaded(modelId)) return true;
+
+    try {
+      final metadata = ModelRegistry.get(modelId);
+      if (metadata == null) {
+        return false;
+      }
+      final modelDef = metadata.toModelDefinition(localPath);
+      await _aiEngine.loadModel(modelDef: modelDef);
+      return true;
+    } catch (e) {
+      debugPrint('InferencePipelineService: failed to load downloaded model: $e');
+      return false;
+    }
+  }
+
+  String? _modelIdForSelection(AIModelSelection model) {
+    switch (model) {
+      case AIModelSelection.selfSegmentation:
+        return 'self_segmentation';
+      case AIModelSelection.deepLabV3:
+        return 'deeplabv3_lite';
+      case AIModelSelection.mobileNetV3:
+        return 'mobilenetv3';
+      case AIModelSelection.imageToText:
+        return 'image_to_text';
+      case AIModelSelection.motionTracking:
+      case AIModelSelection.whisperTiny:
+      case AIModelSelection.none:
+        return null;
+    }
+  }
+
+  String _downloadProgressDetail(ModelDownloadProgress progress) {
+    switch (progress.status) {
+      case ModelDownloadStatus.checkingCache:
+        return 'Checking cache for ${progress.modelId}';
+      case ModelDownloadStatus.fetchingMetadata:
+        return 'Resolving metadata for ${progress.modelId}';
+      case ModelDownloadStatus.downloading:
+        return 'Downloading ${progress.modelId}: '
+            '${(progress.progress * 100).toStringAsFixed(0)}%';
+      case ModelDownloadStatus.verifyingChecksum:
+        return 'Verifying ${progress.modelId} checksum';
+      case ModelDownloadStatus.writingToDisk:
+        return 'Saving ${progress.modelId}';
+      case ModelDownloadStatus.loadingIntoEngine:
+        return 'Loading ${progress.modelId} into engine';
+      case ModelDownloadStatus.completed:
+        return 'Model ${progress.modelId} available';
+      case ModelDownloadStatus.failed:
+      case ModelDownloadStatus.cancelled:
+        return 'Model ${progress.modelId} unavailable';
     }
   }
 

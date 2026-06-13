@@ -2,6 +2,7 @@
 // On-device AI inference engine using TFLite
 // Architecture prepared for MediaPipe integration
 
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
@@ -174,12 +175,7 @@ class LocalAiEngine {
     try {
       debugPrint('📥 Loading model: ${modelDef.name}');
 
-      final interpreter = await Interpreter.fromAsset(
-        modelDef.modelPath,
-        options: InterpreterOptions()
-          ..threads = modelDef.numThreads ?? 1
-          ..useXNNPACK = true, // Use XNNPACK for faster CPU inference
-      );
+      final interpreter = await _createInterpreterForModelPath(modelDef);
 
       _interpreters[modelDef.name] = interpreter;
       _modelDefinitions[modelDef.name] = modelDef;
@@ -250,6 +246,27 @@ class LocalAiEngine {
         inferenceTime: stopwatch.elapsed,
       );
     }
+  }
+
+  /// Create a TFLite interpreter for the provided model path.
+  Future<Interpreter> _createInterpreterForModelPath(
+      TFLiteModelDefinition modelDef) async {
+    final modelFile = File(modelDef.modelPath);
+    if (modelFile.existsSync()) {
+      return await Interpreter.fromFile(
+        modelFile,
+        options: InterpreterOptions()
+          ..threads = modelDef.numThreads ?? 1
+          ..useXNNPACK = true,
+      );
+    }
+
+    return await Interpreter.fromAsset(
+      modelDef.modelPath,
+      options: InterpreterOptions()
+        ..threads = modelDef.numThreads ?? 1
+        ..useXNNPACK = true,
+    );
   }
 
   /// Run inference with batching support

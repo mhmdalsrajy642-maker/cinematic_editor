@@ -4,7 +4,6 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/models/timeline_models.dart';
 import 'export_service.dart';
-import 'ffmpeg_command_builder.dart';
 
 enum ExportJobStatus { queued, running, completed, failed, cancelled }
 
@@ -30,14 +29,14 @@ class ExportJob {
 }
 
 class ExportQueueService {
-  final ExportService _exportService;
+  final ExportPipelineService _pipelineService;
   final List<ExportJob> _queue = [];
   ExportJob? _activeJob;
   final StreamController<ExportJob> _updates = StreamController.broadcast();
   bool _isProcessing = false;
 
-  ExportQueueService({required ExportService exportService})
-      : _exportService = exportService;
+  ExportQueueService({required ExportPipelineService pipelineService})
+      : _pipelineService = pipelineService;
 
   Stream<ExportJob> get updates => _updates.stream;
 
@@ -67,7 +66,7 @@ class ExportQueueService {
       job.status = ExportJobStatus.running;
       _updates.add(job);
 
-      final result = await _exportService.exportTimeline(
+      final result = await _pipelineService.exportTimeline(
         job.timelineState,
         job.profile,
         hasSubscription: job.hasSubscription,
@@ -99,7 +98,7 @@ class ExportQueueService {
 
   Future<bool> cancelJob(String jobId) async {
     if (_activeJob?.id == jobId) {
-      await _exportService.cancelExport();
+      await _pipelineService.cancelExport();
       _activeJob?.status = ExportJobStatus.cancelled;
       _activeJob?.errorMessage = 'Export cancelled by user';
       _activeJob?.progress = 0.0;
@@ -125,7 +124,7 @@ class ExportQueueService {
 
   Future<void> cancelAll() async {
     if (_activeJob != null) {
-      await _exportService.cancelExport();
+      await _pipelineService.cancelExport();
       _activeJob?.status = ExportJobStatus.cancelled;
       _activeJob?.errorMessage = 'Cancelled';
       _activeJob?.progress = 0.0;

@@ -23,6 +23,14 @@ class _CinematicBridgeFFI {
   late final int Function() _engineShutdown;
   late final int Function() _engineIsInitialized;
 
+  // Native engine operations
+  late final int Function() _initializeEngine;
+  late final int Function() _shutdownEngine;
+  late final int Function(Pointer<Utf8>, Int32) _loadTimeline;
+  late final int Function(Int64, Pointer<Uint8>, Int64, Pointer<Uint8>, Int64)
+      _renderFrame;
+  late final int Function(Pointer<Utf8>, Pointer<Utf8>, Int32) _exportProject;
+
   // Render acceleration
   late final int Function(int, int, int) _renderCreateContext;
   late final int Function(int) _renderReleaseContext;
@@ -87,6 +95,26 @@ class _CinematicBridgeFFI {
         .asFunction();
     _engineIsInitialized = _lib
         .lookup<NativeFunction<Int32 Function()>>('engine_is_initialized')
+        .asFunction();
+
+    // Native engine operations
+    _initializeEngine = _lib
+        .lookup<NativeFunction<Int32 Function()>>('initialize_engine')
+        .asFunction();
+    _shutdownEngine = _lib
+        .lookup<NativeFunction<Int32 Function()>>('shutdown_engine')
+        .asFunction();
+    _loadTimeline = _lib
+        .lookup<NativeFunction<Int32 Function(Pointer<Utf8>, Int32)>>(
+            'load_timeline')
+        .asFunction();
+    _renderFrame = _lib
+        .lookup<NativeFunction<Int64 Function(Int64, Pointer<Uint8>, Int64, Pointer<Uint8>, Int64)>>(
+            'render_frame')
+        .asFunction();
+    _exportProject = _lib
+        .lookup<NativeFunction<Int32 Function(Pointer<Utf8>, Pointer<Utf8>, Int32)>>(
+            'export_project')
         .asFunction();
 
     // Render acceleration
@@ -283,6 +311,58 @@ class NativeBridgeResult<T> {
   }
 }
 
+/// Native engine error details
+class NativeEngineError {
+  final int code;
+  final String message;
+
+  const NativeEngineError({
+    required this.code,
+    required this.message,
+  });
+}
+
+/// Result container for native engine operations
+class NativeEngineResult {
+  final bool success;
+  final NativeEngineError? error;
+  final NativeEngineCapabilities? capabilities;
+  final NativeTimelineContext? timelineContext;
+
+  const NativeEngineResult({
+    required this.success,
+    this.error,
+    this.capabilities,
+    this.timelineContext,
+  });
+}
+
+/// Native engine capability metadata
+class NativeEngineCapabilities {
+  final bool supportsTimeline;
+  final bool supportsRendering;
+  final bool supportsFfmpeg;
+
+  const NativeEngineCapabilities({
+    required this.supportsTimeline,
+    required this.supportsRendering,
+    required this.supportsFfmpeg,
+  });
+}
+
+/// Timeline context data returned by the native engine
+class NativeTimelineContext {
+  final int contextId;
+  final int trackCount;
+  final int durationMs;
+
+  const NativeTimelineContext({
+    required this.contextId,
+    required this.trackCount,
+    required this.durationMs,
+  });
+}
+
 /// Main interface to native bridge
 class NativeBridge {
   static NativeBridge? _instance;
@@ -372,6 +452,175 @@ class NativeBridge {
 
   /// Check if bridge is initialized
   static bool get isInitialized => _ffi != null && (_ffi!._engineIsInitialized() != 0);
+
+  /// Initialize the native engine
+  static NativeBridgeResult<bool> initializeEngine() {
+    if (_ffi == null) {
+      return NativeBridgeResult.error(
+        message: 'Bridge not initialized',
+        errorCode: -1,
+      );
+    }
+
+    try {
+      final result = _ffi!._initializeEngine();
+      if (result != 0) {
+        final errorMsg = _ffi!._getErrorMessage(result);
+        return NativeBridgeResult.error(
+          message: errorMsg.toDartString(),
+          errorCode: result,
+        );
+      }
+      return NativeBridgeResult.success(true);
+    } catch (e) {
+      return NativeBridgeResult.error(
+        message: e.toString(),
+        errorCode: -1,
+      );
+    }
+  }
+
+  /// Shutdown the native engine
+  static NativeBridgeResult<bool> shutdownEngine() {
+    if (_ffi == null) {
+      return NativeBridgeResult.error(
+        message: 'Bridge not initialized',
+        errorCode: -1,
+      );
+    }
+
+    try {
+      final result = _ffi!._shutdownEngine();
+      if (result != 0) {
+        final errorMsg = _ffi!._getErrorMessage(result);
+        return NativeBridgeResult.error(
+          message: errorMsg.toDartString(),
+          errorCode: result,
+        );
+      }
+      return NativeBridgeResult.success(true);
+    } catch (e) {
+      return NativeBridgeResult.error(
+        message: e.toString(),
+        errorCode: -1,
+      );
+    }
+  }
+
+  /// Load a timeline into the native engine
+  static NativeBridgeResult<int> loadTimeline(String timelineJson) {
+    if (_ffi == null) {
+      return NativeBridgeResult.error(
+        message: 'Bridge not initialized',
+        errorCode: -1,
+      );
+    }
+
+    try {
+      final timelinePtr = timelineJson.toNativeUtf8();
+      final result = _ffi!._loadTimeline(timelinePtr, timelineJson.length);
+      malloc.free(timelinePtr);
+
+      if (result < 0) {
+        final errorMsg = _ffi!._getErrorMessage(result);
+        return NativeBridgeResult.error(
+          message: errorMsg.toDartString(),
+          errorCode: result,
+        );
+      }
+      return NativeBridgeResult.success(result);
+    } catch (e) {
+      return NativeBridgeResult.error(
+        message: e.toString(),
+        errorCode: -1,
+      );
+    }
+  }
+
+  /// Render a frame through the native engine
+  static NativeBridgeResult<int> renderFrame(
+      int contextHandle,
+      List<int> inputData,
+      int outputBufferSize) {
+    if (_ffi == null) {
+      return NativeBridgeResult.error(
+        message: 'Bridge not initialized',
+        errorCode: -1,
+      );
+    }
+
+    try {
+      final inputPtr = malloc<Uint8>(inputData.length);
+      for (var i = 0; i < inputData.length; i++) {
+        inputPtr[i] = inputData[i];
+      }
+      final outputPtr = malloc<Uint8>(outputBufferSize);
+
+      final result = _ffi!._renderFrame(
+        contextHandle,
+        inputPtr,
+        inputData.length,
+        outputPtr,
+        outputBufferSize,
+      );
+
+      malloc.free(inputPtr);
+      malloc.free(outputPtr);
+
+      if (result < 0) {
+        final errorMsg = _ffi!._getErrorMessage(result);
+        return NativeBridgeResult.error(
+          message: errorMsg.toDartString(),
+          errorCode: result,
+        );
+      }
+      return NativeBridgeResult.success(result);
+    } catch (e) {
+      return NativeBridgeResult.error(
+        message: e.toString(),
+        errorCode: -1,
+      );
+    }
+  }
+
+  /// Export the current project through the native engine
+  static NativeBridgeResult<bool> exportProject(
+      String projectPath,
+      String outputPath,
+      int exportMode) {
+    if (_ffi == null) {
+      return NativeBridgeResult.error(
+        message: 'Bridge not initialized',
+        errorCode: -1,
+      );
+    }
+
+    try {
+      final projectPathPtr = projectPath.toNativeUtf8();
+      final outputPathPtr = outputPath.toNativeUtf8();
+      final result = _ffi!._exportProject(
+        projectPathPtr,
+        outputPathPtr,
+        exportMode,
+      );
+      malloc.free(projectPathPtr);
+      malloc.free(outputPathPtr);
+
+      if (result != 0) {
+        final errorMsg = _ffi!._getErrorMessage(result);
+        return NativeBridgeResult.error(
+          message: errorMsg.toDartString(),
+          errorCode: result,
+        );
+      }
+      return NativeBridgeResult.success(true);
+    } catch (e) {
+      return NativeBridgeResult.error(
+        message: e.toString(),
+        errorCode: -1,
+      );
+    }
+  }
 
   /// Get version information
   static String? get version {
